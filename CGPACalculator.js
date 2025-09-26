@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
-import { SafeAreaView, View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, StatusBar } from 'react-native';
+import {View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, StatusBar } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const semesters = Array.from({ length: 8 }, (_, i) => i + 1);

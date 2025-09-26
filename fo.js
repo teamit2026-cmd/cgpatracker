@@ -1,4 +1,3 @@
-// // graph page 
 import React, { useState, useRef } from 'react';
 import {
   View,
@@ -6,7 +5,6 @@ import {
   StyleSheet,
   Dimensions,
   ScrollView,
-  SafeAreaView,
   StatusBar,
   TouchableOpacity,
   Animated,
@@ -14,6 +12,7 @@ import {
 } from 'react-native';
 import Svg, { Path, Defs, LinearGradient, Stop } from 'react-native-svg';
 import { Ionicons } from '@expo/vector-icons';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const screenWidth = Dimensions.get('window').width;
 
@@ -62,35 +61,34 @@ const CGPAProgressChart = () => {
   // Map CGPA to Y coordinate
   const mapCGPAToY = (cgpa) => ((MAX_CGPA - cgpa) / MAX_CGPA) * CHART_HEIGHT;
 
-  // Generate smooth curved path
+  // Generate smooth curved path (corrected to start with M)
   const generateCurvePath = () => {
     if (cgpaData.length === 0) return { linePath: '', areaPath: '' };
-    
+
     let linePath = '';
     let areaPath = '';
-    
+
     cgpaData.forEach((data, index) => {
       const x = index * pointSpacing;
       const y = mapCGPAToY(data.cgpa);
-      
+
       if (index === 0) {
-        // linePath += M ${x} ${y};
-        // areaPath += M ${x} ${CHART_HEIGHT} L ${x} ${y};
+        linePath = `M ${x} ${y}`;
+        areaPath = `M ${x} ${CHART_HEIGHT} L ${x} ${y}`;
       } else {
-        // Create smooth curves using quadratic bezier
         const prevX = (index - 1) * pointSpacing;
         const prevY = mapCGPAToY(cgpaData[index - 1].cgpa);
         const cpX = prevX + (x - prevX) / 2;
-        
+
         linePath += ` Q ${cpX} ${prevY} ${x} ${y}`;
         areaPath += ` Q ${cpX} ${prevY} ${x} ${y}`;
       }
-      
+
       if (index === cgpaData.length - 1) {
         areaPath += ` L ${x} ${CHART_HEIGHT} Z`;
       }
     });
-    
+
     return { linePath, areaPath };
   };
 
@@ -140,10 +138,10 @@ const CGPAProgressChart = () => {
     <SafeAreaView style={styles.container}>
       <StatusBar backgroundColor={COLORS.lightBlue} barStyle="dark-content" />
       
-      {/* Space for banner at top */}
+      {/* Space for banner at top
       <View style={styles.topSpacePlaceholder}>
         <Text style={styles.placeholderText}>Space for Banner/Header</Text>
-      </View>
+      </View> */}
 
       <TouchableWithoutFeedback onPress={handleOutsideTap} accessible={false}>
         <ScrollView 

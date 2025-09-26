@@ -7,13 +7,14 @@ import {
   Animated,
   Easing,
   Dimensions,
-  SafeAreaView,
   StatusBar,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useRoute, useNavigation } from '@react-navigation/native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
 
 const { width, height } = Dimensions.get('window');
 

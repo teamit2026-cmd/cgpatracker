@@ -8,11 +8,12 @@ import {
   StyleSheet,
   Alert,
   FlatList,
-  SafeAreaView,
   StatusBar,
 } from 'react-native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
 
 // Preview Card Component (embedded)
 const PreviewCard = ({ subject, onRemove }) => (
