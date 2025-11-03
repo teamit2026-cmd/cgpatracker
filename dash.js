@@ -45,7 +45,7 @@ const Dashboard = ({ navigation }) => {
   const navigateTo = (screen) => {
     setMenuVisible(false);
     setProfileVisible(false);
-    
+
     if (screen === 'About') {
       navigation.navigate('About');
     } else if (screen === 'Feedback') {
@@ -127,31 +127,32 @@ const Dashboard = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
-      <StatusBar 
-        barStyle="dark-content" 
+      <StatusBar
+        barStyle="dark-content"
         backgroundColor="#ffffff"
         translucent={false}
       />
-      
+
       {/* Fixed Navigation Bar */}
+      <SafeAreaView>
       <View style={styles.navBar}>
-        <TouchableOpacity 
+        <TouchableOpacity
           onPress={() => setMenuVisible(true)}
           style={styles.navButton}
         >
           <MaterialIcons name="menu" size={24} color="#232867" />
         </TouchableOpacity>
-        
+
         <View style={styles.navTitleContainer}>
-          <Ionicons 
-            name="school" 
-            size={24} 
-            color="#64b5f6" 
-            style={{ marginRight: 8 }} 
+          <Ionicons
+            name="school"
+            size={24}
+            color="#64b5f6"
+            style={{ marginRight: 8 }}
           />
           <Text style={styles.navTitle}>PKIET CGPA Tracker</Text>
         </View>
-        
+
         <TouchableOpacity
           style={styles.navButton}
           onPress={() => setProfileVisible(!profileVisible)}
@@ -159,13 +160,13 @@ const Dashboard = ({ navigation }) => {
           <Ionicons name="person-circle" size={24} color="#232867" />
         </TouchableOpacity>
       </View>
-
+    </SafeAreaView>
       {/* Content Area */}
       <View style={styles.contentArea}>
         <WelcomeSection userName="Robert" />
 
         {/* Dashboard Cards */}
-        <ScrollView 
+        <ScrollView
           contentContainerStyle={styles.content}
           showsVerticalScrollIndicator={false}
         >
@@ -174,7 +175,7 @@ const Dashboard = ({ navigation }) => {
               <MaterialIcons name="calculate" size={40} color="#fff" />
               <Text style={styles.cardTitle}>CGPA Calculator</Text>
             </TouchableOpacity>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.card}
               onPress={() => navigateTo('CGPAProgressAnalysis')}
             >
@@ -259,28 +260,26 @@ const Dashboard = ({ navigation }) => {
 export default Dashboard;
 
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1, 
+  container: {
+    flex: 1,
     backgroundColor: '#f8fafc',
   },
-  
+
   navBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    
+    justifyContent: 'space-between',
     backgroundColor: '#ffffff',
     paddingHorizontal: 16,
+    paddingVertical: 12,         // Responsive vertical padding
     borderBottomWidth: 1,
     borderBottomColor: '#e2e8f0',
-    justifyContent: 'space-between',
-    // Remove any marginTop - let StatusBar handle spacing
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 3,
+    // Removed marginTop and shadow properties for consistency
+    // You can add: paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0
+    // for StatusBar space if needed
   },
-  
+
+
   navButton: {
     width: 40,
     height: 40,
@@ -288,25 +287,25 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderRadius: 20,
   },
-  
+
   navTitleContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
     justifyContent: 'center',
   },
-  
+
   navTitle: {
     color: '#232867',
     fontWeight: 'bold',
     fontSize: 18,
   },
-  
+
   contentArea: {
     flex: 1,
     backgroundColor: '#f8fafc',
   },
-  
+
   welcomeContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -323,27 +322,27 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 6,
   },
-  
+
   textContainer: {
     flex: 1,
     paddingRight: 10,
   },
-  
+
   greetingRow: {
     flexDirection: 'row',
     alignItems: 'center',
   },
-  
+
   welcomeText: {
     fontSize: 24,
     fontWeight: '700',
     color: '#fff',
   },
-  
+
   wavingHand: {
     fontSize: 26,
   },
-  
+
   welcomeSubtitle: {
     marginTop: 8,
     fontSize: 16,
@@ -351,26 +350,26 @@ const styles = StyleSheet.create({
     color: '#dcdcff',
     lineHeight: 22,
   },
-  
+
   highlight: {
     fontWeight: '800',
     color: '#fff',
     textDecorationLine: 'underline',
   },
-  
+
   iconImage: {
     width: 85,
     height: 85,
     marginLeft: 10,
   },
-  
+
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.25)',
     justifyContent: 'flex-start',
     paddingTop: 56, // Height of navbar
   },
-  
+
   menu: {
     position: 'absolute',
     top: 56,
@@ -385,38 +384,38 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 8,
   },
-  
+
   profileMenu: {
     right: 16,
     left: undefined,
     minWidth: width * 0.42,
   },
-  
+
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 12,
   },
-  
+
   menuText: {
     color: '#232867',
     fontSize: 15,
     marginLeft: 12,
     fontWeight: '500',
   },
-  
+
   content: {
     paddingHorizontal: 20,
     paddingBottom: 30,
     paddingTop: 10,
   },
-  
+
   row: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: 25,
   },
-  
+
   card: {
     backgroundColor: '#232867',
     borderRadius: 16,
@@ -431,7 +430,7 @@ const styles = StyleSheet.create({
     minHeight: 140,
     justifyContent: 'center',
   },
-  
+
   cardTitle: {
     color: '#fff',
     fontSize: 15,
