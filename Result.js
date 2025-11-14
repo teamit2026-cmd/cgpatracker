@@ -15,7 +15,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-
 const { width, height } = Dimensions.get('window');
 
 export default function Result() {
@@ -23,7 +22,7 @@ export default function Result() {
   const navigation = useNavigation();
   
   // Get passed data from navigation
-  const { cgpa, semester, totalSubjects, isCustom } = route.params;
+  const { cgpa, semester, department, totalSubjects, isCustom } = route.params;
   
   const [message, setMessage] = useState('');
   const [emoji, setEmoji] = useState('🌟');
@@ -119,16 +118,62 @@ export default function Result() {
 
   const saveCGPA = async () => {
     try {
-      const cgpaData = {
+      // Create new CGPA record
+      const newCGPARecord = {
+        id: `${Date.now()}`, // Unique ID for each record
         value: cgpa,
         semester: isCustom ? 'Custom' : semester,
+        department: department || 'N/A',
         totalSubjects,
         isCustom,
         grade: gradeInfo.grade,
+        gradeColor: gradeInfo.color,
         timestamp: new Date().toISOString(),
+        dateFormatted: new Date().toLocaleDateString('en-IN', {
+          day: '2-digit',
+          month: 'short',
+          year: 'numeric'
+        }),
+        timeFormatted: new Date().toLocaleTimeString('en-IN', {
+          hour: '2-digit',
+          minute: '2-digit'
+        }),
         status: 'saved',
       };
-      await AsyncStorage.setItem('savedCGPA', JSON.stringify(cgpaData));
+
+      // Get existing CGPA history
+      const existingData = await AsyncStorage.getItem('cgpaHistory');
+      let cgpaHistory = existingData ? JSON.parse(existingData) : [];
+
+      // Check if this semester already exists
+      const existingIndex = cgpaHistory.findIndex(
+        record => record.semester === newCGPARecord.semester && 
+                  record.department === newCGPARecord.department &&
+                  !record.isCustom
+      );
+
+      if (existingIndex !== -1) {
+        // Update existing semester record
+        cgpaHistory[existingIndex] = newCGPARecord;
+      } else {
+        // Add new record
+        cgpaHistory.push(newCGPARecord);
+      }
+
+      // Sort by semester (custom entries at the end)
+      cgpaHistory.sort((a, b) => {
+        if (a.isCustom && !b.isCustom) return 1;
+        if (!a.isCustom && b.isCustom) return -1;
+        if (a.isCustom && b.isCustom) return 0;
+        return a.semester - b.semester;
+      });
+
+      // Save updated history
+      await AsyncStorage.setItem('cgpaHistory', JSON.stringify(cgpaHistory));
+
+      // Also save the latest CGPA for quick access
+      await AsyncStorage.setItem('latestCGPA', JSON.stringify(newCGPARecord));
+
       setSaved(true);
       
       // Navigate to Dashboard after a short delay
@@ -138,6 +183,7 @@ export default function Result() {
       
     } catch (error) {
       console.log('Error saving CGPA:', error);
+      alert('Failed to save CGPA. Please try again.');
     }
   };
 
@@ -156,12 +202,22 @@ export default function Result() {
       >
         {/* Main Content */}
         <View style={styles.contentContainer}>
-          {/* Semester and CGPA Display */}
+          {/* Department and Semester Display */}
           <View style={styles.infoContainer}>
+            {department && (
+              <Text style={styles.departmentText}>
+                {department === 'CSE' ? 'Computer Science Engineering' : 
+                 department === 'IT' ? 'Information Technology' : 
+                 'Electrical & Electronics Engineering'}
+              </Text>
+            )}
             <Text style={styles.heading}>
               {isCustom ? 'CUSTOM SUBJECTS' : `SEMESTER: ${semester}`}
             </Text>
             <Text style={styles.cgpaText}>CGPA: {cgpa}</Text>
+            {/* <View style={[styles.gradeBadge, { backgroundColor: gradeInfo.color }]}>
+              <Text style={styles.gradeText}>Grade: {gradeInfo.grade}</Text>
+            </View> */}
           </View>
 
           {/* Animated Emoji */}
@@ -179,15 +235,29 @@ export default function Result() {
             <Text style={styles.message}>{message}</Text>
           </View>
 
+          {/* Additional Info */}
+          <View style={styles.statsContainer}>
+            <View style={styles.statItem}>
+              <Ionicons name="book-outline" size={20} color="#232867" />
+              <Text style={styles.statText}>{totalSubjects} Subjects</Text>
+            </View>
+            <View style={styles.statItem}>
+              <Ionicons name="trending-up-outline" size={20} color="#232867" />
+              <Text style={styles.statText}>{calculatePercentage(cgpa)}%</Text>
+            </View>
+          </View>
+
           {/* Save Button - Centered */}
           <View style={styles.buttonContainer}>
-            <TouchableOpacity onPress={saveCGPA} activeOpacity={0.8}>
+            <TouchableOpacity onPress={saveCGPA} activeOpacity={0.8} disabled={saved}>
               <LinearGradient
-                colors={['#232867', '#4facfe']}
+                colors={saved ? ['#10b981', '#059669'] : ['#232867', '#4facfe']}
                 style={styles.saveButton}
               >
-                <Ionicons name="bookmark" size={20} color="#fff" />
-                <Text style={styles.saveText}>Save Result</Text>
+                <Ionicons name={saved ? "checkmark-circle" : "bookmark"} size={20} color="#fff" />
+                <Text style={styles.saveText}>
+                  {saved ? 'Saved Successfully!' : 'Save Result'}
+                </Text>
               </LinearGradient>
             </TouchableOpacity>
           </View>
@@ -227,6 +297,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 20,
   },
+
+  departmentText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#232867',
+    marginBottom: 8,
+    textAlign: 'center',
+    opacity: 0.8,
+  },
   
   heading: {
     fontSize: 20,
@@ -242,6 +321,19 @@ const styles = StyleSheet.create({
     color: '#232867',
     marginBottom: 12,
     textAlign: 'center',
+  },
+
+  gradeBadge: {
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+    borderRadius: 20,
+    marginTop: 5,
+  },
+
+  gradeText: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 16,
   },
   
   emoji: {
@@ -274,6 +366,28 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     lineHeight: 22,
   },
+
+  statsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    width: width * 0.9,
+    marginBottom: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.7)',
+    borderRadius: 15,
+    padding: 15,
+  },
+
+  statItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+
+  statText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#232867',
+  },
   
   buttonContainer: {
     alignItems: 'center',
@@ -283,7 +397,7 @@ const styles = StyleSheet.create({
   
   saveButton: {
     borderRadius: 35,
-    padding:20,
+    padding: 20,
     alignItems: 'center',
     flexDirection: 'row',
     shadowColor: '#000',
@@ -291,7 +405,7 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 5,
     justifyContent: 'center',
-    // minWidth: width * 0.6,
+    minWidth: width * 0.6,
   },
   
   saveText: {

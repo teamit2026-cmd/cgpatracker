@@ -50,15 +50,17 @@ const Dashboard = ({ navigation }) => {
       navigation.navigate('About');
     } else if (screen === 'Feedback') {
       navigation.navigate('Feedback');
+    }
+    else if (screen === 'Privacy') {
+      navigation.navigate('Privacy');
     } else if (screen === 'CGPAProgressAnalysis') {
       navigation.navigate('CGPAProgressAnalysis');
     } else if (screen === 'PrivacyPolicy') {
       navigation.navigate('PrivacyPolicy');
     } else if (screen === 'ViewProfile') {
       navigation.navigate('ViewProfile');
-    } else if (screen === 'ChangePassword') {
-      navigation.navigate('ChangePassword');
-    } else if (screen === 'CGPACalculator') {
+    }
+    else if (screen === 'CGPACalculator') {
       navigation.navigate('CGPACalculator');
     } else if (screen === 'Download') {
       navigation.navigate('Download');
@@ -135,32 +137,32 @@ const Dashboard = ({ navigation }) => {
 
       {/* Fixed Navigation Bar */}
       <SafeAreaView>
-      <View style={styles.navBar}>
-        <TouchableOpacity
-          onPress={() => setMenuVisible(true)}
-          style={styles.navButton}
-        >
-          <MaterialIcons name="menu" size={24} color="#232867" />
-        </TouchableOpacity>
+        <View style={styles.navBar}>
+          <TouchableOpacity
+            onPress={() => setMenuVisible(true)}
+            style={styles.navButton}
+          >
+            <MaterialIcons name="menu" size={24} color="#232867" />
+          </TouchableOpacity>
 
-        <View style={styles.navTitleContainer}>
-          <Ionicons
-            name="school"
-            size={24}
-            color="#64b5f6"
-            style={{ marginRight: 8 }}
-          />
-          <Text style={styles.navTitle}>PKIET CGPA Tracker</Text>
+          <View style={styles.navTitleContainer}>
+            <Ionicons
+              name="school"
+              size={24}
+              color="#64b5f6"
+              style={{ marginRight: 8 }}
+            />
+            <Text style={styles.navTitle}>PKIET CGPA Tracker</Text>
+          </View>
+
+          <TouchableOpacity
+            style={styles.navButton}
+            onPress={() => setProfileVisible(!profileVisible)}
+          >
+            <Ionicons name="person-circle" size={24} color="#232867" />
+          </TouchableOpacity>
         </View>
-
-        <TouchableOpacity
-          style={styles.navButton}
-          onPress={() => setProfileVisible(!profileVisible)}
-        >
-          <Ionicons name="person-circle" size={24} color="#232867" />
-        </TouchableOpacity>
-      </View>
-    </SafeAreaView>
+      </SafeAreaView>
       {/* Content Area */}
       <View style={styles.contentArea}>
         <WelcomeSection userName="Robert" />
@@ -217,7 +219,7 @@ const Dashboard = ({ navigation }) => {
               <Ionicons name="chatbox-ellipses-outline" size={18} color="#232867" />
               <Text style={styles.menuText}>Feedback</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.menuItem} onPress={() => navigateTo('PrivacyPolicy')}>
+            <TouchableOpacity style={styles.menuItem} onPress={() => navigateTo('Privacy')}>
               <Ionicons name="lock-closed-outline" size={18} color="#232867" />
               <Text style={styles.menuText}>Privacy Policy</Text>
             </TouchableOpacity>
@@ -241,14 +243,6 @@ const Dashboard = ({ navigation }) => {
             <TouchableOpacity style={styles.menuItem} onPress={() => navigateTo('ViewProfile')}>
               <Ionicons name="person-outline" size={18} color="#232867" />
               <Text style={styles.menuText}>View Profile</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.menuItem} onPress={() => navigateTo('ChangePassword')}>
-              <Ionicons name="key-outline" size={18} color="#232867" />
-              <Text style={styles.menuText}>Change Password</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.menuItem} onPress={() => navigateTo('Logout')}>
-              <Ionicons name="log-out-outline" size={18} color="#232867" />
-              <Text style={styles.menuText}>Logout</Text>
             </TouchableOpacity>
           </View>
         </TouchableOpacity>

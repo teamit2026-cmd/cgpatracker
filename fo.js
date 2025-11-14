@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -9,10 +9,13 @@ import {
   TouchableOpacity,
   Animated,
   TouchableWithoutFeedback,
+  ActivityIndicator,
 } from 'react-native';
 import Svg, { Path, Defs, LinearGradient, Stop } from 'react-native-svg';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useFocusEffect } from '@react-navigation/native';
 
 const screenWidth = Dimensions.get('window').width;
 
@@ -35,33 +38,96 @@ const Y_AXIS_SCALE = [10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0];
 
 const CGPAProgressChart = () => {
   const [selectedDot, setSelectedDot] = useState(null);
+  const [cgpaData, setCgpaData] = useState([]);
+  const [overallCGPA, setOverallCGPA] = useState(0);
+  const [loading, setLoading] = useState(true);
   const fadeAnimation = useRef(new Animated.Value(0)).current;
   const timeoutRef = useRef(null);
 
-  // CGPA data
-  const cgpaData = [
-    { semester: 'Sem 1', cgpa: 7.5 },
-    { semester: 'Sem 2', cgpa: 3.0 },
-    { semester: 'Sem 3', cgpa: 8.0 },
-    { semester: 'Sem 4', cgpa: 8.2 },
-    { semester: 'Sem 5', cgpa: 8.4 },
-    { semester: 'Sem 6', cgpa: 2.5 },
-    { semester: 'Sem 7', cgpa: 8.7 },
-    { semester: 'Sem 8', cgpa: 8.8 },
-  ];
+  // Load CGPA data from AsyncStorage
+  useFocusEffect(
+    useCallback(() => {
+      loadCGPAData();
+    }, [])
+  );
+
+  const loadCGPAData = async () => {
+    try {
+      setLoading(true);
+      const data = await AsyncStorage.getItem('cgpaHistory');
+      
+      if (data) {
+        const history = JSON.parse(data);
+        
+        // Create array for 8 semesters with 0 for uncalculated ones
+        const semesterData = Array.from({ length: 8 }, (_, index) => {
+          const semesterNum = index + 1;
+          // Find CGPA for this semester (excluding custom entries)
+          const semesterRecord = history.find(
+            record => !record.isCustom && record.semester === semesterNum
+          );
+          
+          return {
+            semester: `Sem ${semesterNum}`,
+            cgpa: semesterRecord ? semesterRecord.value : 0,
+            hasData: !!semesterRecord,
+          };
+        });
+        
+        setCgpaData(semesterData);
+        
+        // Calculate overall CGPA (only from semesters with data)
+        const semestersWithData = semesterData.filter(sem => sem.hasData);
+        if (semestersWithData.length > 0) {
+          const total = semestersWithData.reduce((sum, sem) => sum + sem.cgpa, 0);
+          const average = total / semestersWithData.length;
+          setOverallCGPA(parseFloat(average.toFixed(2)));
+        } else {
+          setOverallCGPA(0);
+        }
+      } else {
+        // No data - show all semesters with 0 CGPA
+        const emptySemesterData = Array.from({ length: 8 }, (_, index) => ({
+          semester: `Sem ${index + 1}`,
+          cgpa: 0,
+          hasData: false,
+        }));
+        setCgpaData(emptySemesterData);
+        setOverallCGPA(0);
+      }
+    } catch (error) {
+      console.log('Error loading CGPA data:', error);
+      // Show empty data on error
+      const emptySemesterData = Array.from({ length: 8 }, (_, index) => ({
+        semester: `Sem ${index + 1}`,
+        cgpa: 0,
+        hasData: false,
+      }));
+      setCgpaData(emptySemesterData);
+      setOverallCGPA(0);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const pointSpacing = CHART_WIDTH / (cgpaData.length - 1);
 
-  // Calculate stats
-  const currentCGPA = cgpaData[cgpaData.length - 1].cgpa;
-  const averageCGPA = cgpaData.reduce((sum, d) => sum + d.cgpa, 0) / cgpaData.length;
-  const highestCGPA = Math.max(...cgpaData.map(d => d.cgpa));
-  const lowestCGPA = Math.min(...cgpaData.map(d => d.cgpa));
+  // Calculate stats (only from semesters with data)
+  const semestersWithData = cgpaData.filter(sem => sem.hasData);
+  const currentCGPA = semestersWithData.length > 0 
+    ? semestersWithData[semestersWithData.length - 1].cgpa 
+    : 0;
+  const highestCGPA = semestersWithData.length > 0 
+    ? Math.max(...semestersWithData.map(d => d.cgpa)) 
+    : 0;
+  const lowestCGPA = semestersWithData.length > 0 
+    ? Math.min(...semestersWithData.map(d => d.cgpa)) 
+    : 0;
 
   // Map CGPA to Y coordinate
   const mapCGPAToY = (cgpa) => ((MAX_CGPA - cgpa) / MAX_CGPA) * CHART_HEIGHT;
 
-  // Generate smooth curved path (corrected to start with M)
+  // Generate smooth curved path
   const generateCurvePath = () => {
     if (cgpaData.length === 0) return { linePath: '', areaPath: '' };
 
@@ -94,6 +160,9 @@ const CGPAProgressChart = () => {
 
   // Handle dot press
   const handleDotPress = (index) => {
+    // Don't show tooltip for semesters without data
+    if (!cgpaData[index].hasData) return;
+
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
 
     if (selectedDot === index) {
@@ -134,14 +203,20 @@ const CGPAProgressChart = () => {
 
   const { linePath, areaPath } = generateCurvePath();
 
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={COLORS.primary} />
+          <Text style={styles.loadingText}>Loading CGPA Data...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar backgroundColor={COLORS.lightBlue} barStyle="dark-content" />
-      
-      {/* Space for banner at top
-      <View style={styles.topSpacePlaceholder}>
-        <Text style={styles.placeholderText}>Space for Banner/Header</Text>
-      </View> */}
 
       <TouchableWithoutFeedback onPress={handleOutsideTap} accessible={false}>
         <ScrollView 
@@ -159,135 +234,161 @@ const CGPAProgressChart = () => {
                 <Text style={styles.headerTitle}>CGPA Progress Analysis</Text>
               </View>
 
+              {/* No Data Message */}
+              {semestersWithData.length === 0 && (
+                <View style={styles.noDataContainer}>
+                  <Ionicons name="analytics-outline" size={48} color={COLORS.primaryLight} />
+                  <Text style={styles.noDataText}>No CGPA data available yet</Text>
+                  <Text style={styles.noDataSubtext}>Calculate your CGPA to see the progress chart</Text>
+                </View>
+              )}
+
               {/* Chart Area */}
-              <View style={styles.chartArea}>
-                {/* Y-axis labels (0-10 scale) */}
-                <View style={styles.yAxisContainer}>
-                  {Y_AXIS_SCALE.map((value) => (
-                    <Text key={value} style={styles.yAxisLabel}>
-                      {value}.0
-                    </Text>
-                  ))}
-                </View>
+              {semestersWithData.length > 0 && (
+                <View style={styles.chartArea}>
+                  {/* Y-axis labels (0-10 scale) */}
+                  <View style={styles.yAxisContainer}>
+                    {Y_AXIS_SCALE.map((value) => (
+                      <Text key={value} style={styles.yAxisLabel}>
+                        {value}.0
+                      </Text>
+                    ))}
+                  </View>
 
-                {/* Chart Container */}
-                <View style={styles.chartContainer}>
-                  {/* Grid lines */}
-                  {Y_AXIS_SCALE.map((value, index) => (
-                    <View
-                      key={value}
-                      style={[
-                        styles.gridLine,
-                        { top: (index / (Y_AXIS_SCALE.length - 1)) * CHART_HEIGHT }
-                      ]}
-                    />
-                  ))}
+                  {/* Chart Container */}
+                  <View style={styles.chartContainer}>
+                    {/* Grid lines */}
+                    {Y_AXIS_SCALE.map((value, index) => (
+                      <View
+                        key={value}
+                        style={[
+                          styles.gridLine,
+                          { top: (index / (Y_AXIS_SCALE.length - 1)) * CHART_HEIGHT }
+                        ]}
+                      />
+                    ))}
 
-                  {/* SVG Chart */}
-                  <Svg height={CHART_HEIGHT} width={CHART_WIDTH} style={styles.svgChart}>
-                    <Defs>
-                      <LinearGradient id="chartGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                        <Stop offset="0%" stopColor={COLORS.primary} stopOpacity={0.3} />
-                        <Stop offset="100%" stopColor={COLORS.primary} stopOpacity={0.05} />
-                      </LinearGradient>
-                    </Defs>
-                    
-                    <Path d={areaPath} fill="url(#chartGradient)" />
-                    <Path
-                      d={linePath}
-                      stroke={COLORS.primary}
-                      strokeWidth="3"
-                      fill="none"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </Svg>
+                    {/* SVG Chart */}
+                    <Svg height={CHART_HEIGHT} width={CHART_WIDTH} style={styles.svgChart}>
+                      <Defs>
+                        <LinearGradient id="chartGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                          <Stop offset="0%" stopColor={COLORS.primary} stopOpacity={0.3} />
+                          <Stop offset="100%" stopColor={COLORS.primary} stopOpacity={0.05} />
+                        </LinearGradient>
+                      </Defs>
+                      
+                      <Path d={areaPath} fill="url(#chartGradient)" />
+                      <Path
+                        d={linePath}
+                        stroke={COLORS.primary}
+                        strokeWidth="3"
+                        fill="none"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </Svg>
 
-                  {/* Data points */}
-                  {cgpaData.map((data, index) => {
-                    const x = index * pointSpacing;
-                    const y = mapCGPAToY(data.cgpa);
-                    const isSelected = selectedDot === index;
+                    {/* Data points */}
+                    {cgpaData.map((data, index) => {
+                      const x = index * pointSpacing;
+                      const y = mapCGPAToY(data.cgpa);
+                      const isSelected = selectedDot === index;
+                      const hasData = data.hasData;
 
-                    return (
-                      <View key={index} style={styles.pointWrapper} pointerEvents="box-none">
-                        <TouchableOpacity
-                          style={[styles.dataPointContainer, { left: x - 8, top: y - 8 }]}
-                          onPress={() => handleDotPress(index)}
-                          activeOpacity={0.7}
-                        >
-                          <View style={[styles.dataPoint, isSelected && styles.selectedDataPoint]} />
-                        </TouchableOpacity>
-
-                        {isSelected && (
-                          <Animated.View
-                            style={[
-                              styles.tooltipContainer,
-                              {
-                                left: x - 40,
-                                top: y - 65,
-                                opacity: fadeAnimation,
-                                transform: [
-                                  {
-                                    translateY: fadeAnimation.interpolate({
-                                      inputRange: [0, 1],
-                                      outputRange: [10, 0],
-                                    }),
-                                  },
-                                  {
-                                    scale: fadeAnimation.interpolate({
-                                      inputRange: [0, 1],
-                                      outputRange: [0.8, 1],
-                                    }),
-                                  },
-                                ],
-                              },
-                            ]}
-                            pointerEvents="none"
+                      return (
+                        <View key={index} style={styles.pointWrapper} pointerEvents="box-none">
+                          <TouchableOpacity
+                            style={[styles.dataPointContainer, { left: x - 8, top: y - 8 }]}
+                            onPress={() => handleDotPress(index)}
+                            activeOpacity={hasData ? 0.7 : 1}
+                            disabled={!hasData}
                           >
-                            <View style={styles.tooltip}>
-                              <Text style={styles.tooltipSemester}>{data.semester}</Text>
-                              <Text style={styles.tooltipCGPA}>CGPA: {data.cgpa}</Text>
-                            </View>
-                          </Animated.View>
-                        )}
-                      </View>
-                    );
-                  })}
-                </View>
+                            <View style={[
+                              styles.dataPoint, 
+                              isSelected && styles.selectedDataPoint,
+                              !hasData && styles.noDataPoint
+                            ]} />
+                          </TouchableOpacity>
 
-                {/* X-axis labels - SIMPLE TEXT WITHOUT BOXES */}
-                <View style={styles.xAxisContainer}>
-                  {cgpaData.map((data, index) => (
-                    <Text key={index} style={styles.xAxisLabel}>
-                      {data.semester}
-                    </Text>
-                  ))}
+                          {isSelected && hasData && (
+                            <Animated.View
+                              style={[
+                                styles.tooltipContainer,
+                                {
+                                  left: x - 40,
+                                  top: y - 65,
+                                  opacity: fadeAnimation,
+                                  transform: [
+                                    {
+                                      translateY: fadeAnimation.interpolate({
+                                        inputRange: [0, 1],
+                                        outputRange: [10, 0],
+                                      }),
+                                    },
+                                    {
+                                      scale: fadeAnimation.interpolate({
+                                        inputRange: [0, 1],
+                                        outputRange: [0.8, 1],
+                                      }),
+                                    },
+                                  ],
+                                },
+                              ]}
+                              pointerEvents="none"
+                            >
+                              <View style={styles.tooltip}>
+                                <Text style={styles.tooltipSemester}>{data.semester}</Text>
+                                <Text style={styles.tooltipCGPA}>CGPA: {data.cgpa.toFixed(2)}</Text>
+                              </View>
+                            </Animated.View>
+                          )}
+                        </View>
+                      );
+                    })}
+                  </View>
+
+                  {/* X-axis labels */}
+                  <View style={styles.xAxisContainer}>
+                    {cgpaData.map((data, index) => (
+                      <Text 
+                        key={index} 
+                        style={[
+                          styles.xAxisLabel,
+                          !data.hasData && styles.xAxisLabelNoData
+                        ]}
+                      >
+                        {data.semester}
+                      </Text>
+                    ))}
+                  </View>
                 </View>
-              </View>
+              )}
             </View>
 
-            {/* Average CGPA Card */}
+            {/* Overall CGPA Card */}
             <View style={styles.averageCGPACard}>
-              <Text style={styles.averageCGPALabel}>Average CGPA</Text>
+              <Text style={styles.averageCGPALabel}>Overall CGPA</Text>
               <Text style={styles.averageCGPAValue}>
-                {averageCGPA.toFixed(1)}
+                {overallCGPA.toFixed(2)}
+              </Text>
+              <Text style={styles.averageCGPASubtext}>
+                {semestersWithData.length} semester{semestersWithData.length !== 1 ? 's' : ''} completed
               </Text>
             </View>
 
             {/* Stats Cards Row */}
             <View style={styles.statsContainer}>
               <View style={styles.statItem}>
-                <Text style={styles.statValue}>{highestCGPA.toFixed(1)}</Text>
+                <Text style={styles.statValue}>{highestCGPA.toFixed(2)}</Text>
                 <Text style={styles.statLabel}>Highest</Text>
               </View>
               <View style={styles.statItem}>
-                <Text style={styles.statValue}>{lowestCGPA.toFixed(1)}</Text>
+                <Text style={styles.statValue}>{lowestCGPA.toFixed(2)}</Text>
                 <Text style={styles.statLabel}>Lowest</Text>
               </View>
               <View style={styles.statItem}>
-                <Text style={styles.statValue}>{currentCGPA.toFixed(1)}</Text>
-                <Text style={styles.statLabel}>CurrentCGPA</Text>
+                <Text style={styles.statValue}>{currentCGPA.toFixed(2)}</Text>
+                <Text style={styles.statLabel}>Current</Text>
               </View>
             </View>
           </View>
@@ -302,18 +403,16 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.lightBlue,
   },
-  // Space at top for banner
-  topSpacePlaceholder: {
-    height: 100,
-    backgroundColor: COLORS.lightBlueHover,
+  loadingContainer: {
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 10,
   },
-  placeholderText: {
+  loadingText: {
+    marginTop: 16,
     fontSize: 16,
     color: COLORS.primaryDark,
-    fontWeight: '600',
+    fontWeight: '500',
   },
   scrollContainer: {
     flex: 1,
@@ -349,8 +448,24 @@ const styles = StyleSheet.create({
     color: COLORS.primaryDark,
     marginLeft: 8,
   },
+  noDataContainer: {
+    alignItems: 'center',
+    paddingVertical: 60,
+  },
+  noDataText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: COLORS.primaryDark,
+    marginTop: 16,
+  },
+  noDataSubtext: {
+    fontSize: 14,
+    color: COLORS.primaryLight,
+    marginTop: 8,
+    textAlign: 'center',
+  },
   chartArea: {
-    height: 260, // REDUCED HEIGHT - removed excess space
+    height: 260,
     flexDirection: 'row',
     position: 'relative',
   },
@@ -412,6 +527,11 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 2,
   },
+  noDataPoint: {
+    backgroundColor: COLORS.lightBlueHover,
+    borderColor: COLORS.lightBlue,
+    opacity: 0.5,
+  },
   selectedDataPoint: {
     width: 12,
     height: 12,
@@ -449,13 +569,12 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontWeight: 'bold',
   },
-  // SIMPLE X-AXIS LABELS - NO BOXES, MINIMAL SPACE
   xAxisContainer: {
     position: 'absolute',
-    bottom: 5, // REDUCED from 20 to 5
+    bottom: 5,
     left: 52,
     right: 10,
-    height: 25, // REDUCED from 60 to 25
+    height: 25,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -466,9 +585,12 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     textAlign: 'center',
     flex: 1,
-    includeFontPadding: false, // Remove extra font padding
+    includeFontPadding: false,
     paddingVertical: 0,
     marginVertical: 0,
+  },
+  xAxisLabelNoData: {
+    opacity: 0.4,
   },
   averageCGPACard: {
     backgroundColor: COLORS.primary,
@@ -492,6 +614,12 @@ const styles = StyleSheet.create({
     fontSize: 48,
     color: '#ffffff',
     fontWeight: 'bold',
+  },
+  averageCGPASubtext: {
+    fontSize: 14,
+    color: COLORS.secondary,
+    marginTop: 8,
+    fontWeight: '500',
   },
   statsContainer: {
     flexDirection: 'row',

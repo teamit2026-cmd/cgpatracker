@@ -2,10 +2,8 @@ import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 
-// Import individual screens directly
+// Import individual screens
 import SplashScreen from './screens/SplashScreen';
-import AuthScreen from './screens/AuthScreen';
-import OtpScreen from './screens/OtpScreen';
 import Dashboard from './dash.js';
 import About from './about.js';
 import Feedback from './feedback.js';
@@ -14,9 +12,9 @@ import ViewProfile from './ViewProfile.js';
 import ChangePassword from './ChangePassword.js';
 import CGPACalculator from './CGPACalculator.js';
 import Result from './Result.js';
-import CustomSubject  from './custom_subject.js';
+import CustomSubject from './custom_subject.js';
 import Download from './Download.js';
-
+import Privacy from './Privacy.js';
 
 const Stack = createStackNavigator();
 
@@ -33,16 +31,6 @@ function App() {
           component={SplashScreen}
         />
         
-        {/* Auth Flow */}
-        <Stack.Screen 
-          name="Auth" 
-          component={AuthScreen}
-        />
-        <Stack.Screen 
-          name="OtpScreen" 
-          component={OtpScreen}
-        />
-        
         {/* Main App Screens */}
         <Stack.Screen 
           name="Dashboard" 
@@ -55,6 +43,10 @@ function App() {
         <Stack.Screen 
           name="Feedback" 
           component={Feedback}
+        />
+        <Stack.Screen 
+          name="Privacy" 
+          component={Privacy}
         />
         <Stack.Screen 
           name="CGPAProgressAnalysis" 

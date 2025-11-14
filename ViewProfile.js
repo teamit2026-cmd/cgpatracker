@@ -1,6 +1,4 @@
-// //user detail page 
-
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -13,204 +11,182 @@ import {
   Dimensions,
   ScrollView,
   ActivityIndicator,
-} from 'react-native';
-import { StatusBar } from 'expo-status-bar';
-import { Ionicons } from '@expo/vector-icons';
-import { Picker } from '@react-native-picker/picker';
-import { SafeAreaView } from 'react-native-safe-area-context';
+} from "react-native";
+import { StatusBar } from "expo-status-bar";
+import { Ionicons } from "@expo/vector-icons";
+import { Picker } from "@react-native-picker/picker";
+import { SafeAreaView } from "react-native-safe-area-context";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
-
-const { height: screenHeight } = Dimensions.get('window');
+const { height: screenHeight } = Dimensions.get("window");
 
 export default function App() {
+  // User profile state will be loaded from AsyncStorage
   const [userProfile, setUserProfile] = useState({
-    name: 'John Doe',
-    regNo: '123456',
-    department: 'Information Technology',
-    year: 'II',
-    email: 'john.doe@example.com',
+    name: "",
+    regNo: "",
+    department: "",
+    year: "",
+    email: "",
   });
+  const [isLoading, setIsLoading] = useState(true);
 
   const [isEditModalVisible, setEditModalVisible] = useState(false);
   const [editProfile, setEditProfile] = useState(userProfile);
-  
-  // Error states for form validation
   const [errors, setErrors] = useState({
-    name: '',
-    regNo: '',
-    department: '',
-    year: '',
+    name: "",
+    regNo: "",
+    department: "",
+    year: "",
+    email: "",
   });
-
-  // Info popup state
   const [infoPopupVisible, setInfoPopupVisible] = useState(false);
-  const [infoMessage, setInfoMessage] = useState('');
-
-  // Toast notification states
+  const [infoMessage, setInfoMessage] = useState("");
   const [toastVisible, setToastVisible] = useState(false);
-  const [toastMessage, setToastMessage] = useState('');
-  const [toastType, setToastType] = useState('success');
+  const [toastMessage, setToastMessage] = useState("");
+  const [toastType, setToastType] = useState("success");
   const [toastAnimation] = useState(new Animated.Value(0));
 
-  // Department options
+  // Options for dropdowns
   const departmentOptions = [
-    { label: 'Information Technology (IT)', value: 'Information Technology' },
-    { label: 'Computer Science Engineering (CSE)', value: 'Computer Science Engineering' },
-    { label: 'Electronics & Communication Engineering (ECE)', value: 'Electronics & Communication Engineering' },
-    { label: 'Electrical & Electronics Engineering (EEE)', value: 'Electrical & Electronics Engineering' },
-    { label: 'Aeronautical & Civil Engineering (ACE)', value: 'Aeronautical & Civil Engineering' },
-    { label: 'Information Science Engineering (ISE)', value: 'Information Science Engineering' },
-    { label: 'Aerospace Engineering (ASE)', value: 'Aerospace Engineering' },
-    { label: 'Petroleum & Chemical Engineering (PCE)', value: 'Petroleum & Chemical Engineering' },
+    { label: "Information Technology (IT)", value: "Information Technology" },
+    { label: "Computer Science Engineering (CSE)", value: "Computer Science Engineering" },
+    { label: "Electronics & Communication Engineering (ECE)", value: "Electronics & Communication Engineering" }
   ];
 
-  // Year options
   const yearOptions = [
-    { label: 'I', value: 'I' },
-    { label: 'II', value: 'II' },
-    { label: 'III', value: 'III' },
-    { label: 'IV', value: 'IV' },
+    { label: "I", value: "I" },
+    { label: "II", value: "II" },
+    { label: "III", value: "III" },
+    { label: "IV", value: "IV" },
   ];
 
-  // Input validation functions
-  const validateName = (name) => {
-    const regex = /^[A-Za-z ]*$/;
-    return regex.test(name);
-  };
+  // Load stored profile on mount
+  useEffect(() => {
+    (async () => {
+      try {
+        const stor = await AsyncStorage.getItem("userProfile");
+        if (stor) {
+          setUserProfile(JSON.parse(stor));
+        }
+      } catch (e) {
+        console.log("Error loading user profile from storage", e);
+      }
+      setIsLoading(false);
+    })();
+  }, []);
 
-  const validateRegistrationNumber = (regno) => {
-    const regex = /^\d*$/;
-    return regex.test(regno);
-  };
+  // Whenever userProfile changes, update editProfile state
+  useEffect(() => {
+    setEditProfile(userProfile);
+  }, [userProfile]);
 
-  // Dynamic field validation with specific error messages
+  // Validation functions
+  const validateName = (name) => /^[A-Za-z ]*$/.test(name);
+  const validateRegistrationNumber = (regno) => /^\d*$/.test(regno);
+  const validateEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+
   const validateField = (fieldName, value) => {
     const newErrors = { ...errors };
-    
     switch (fieldName) {
-      case 'name':
-        if (!value.trim()) {
-          newErrors.name = 'Name is required';
-        } else if (!validateName(value)) {
-          newErrors.name = 'Name can only contain letters and spaces';
-        } else if (value.trim().length < 2) {
-          newErrors.name = 'Name must be at least 2 characters';
-        } else {
-          newErrors.name = '';
-        }
+      case "name":
+        if (!value.trim()) newErrors.name = "Name is required";
+        else if (!validateName(value)) newErrors.name = "Name can only contain letters and spaces";
+        else if (value.trim().length < 2) newErrors.name = "Name must be at least 2 characters";
+        else newErrors.name = "";
         break;
-        
-      case 'regNo':
-        if (!value.trim()) {
-          newErrors.regNo = 'Registration number is required';
-        } else if (!validateRegistrationNumber(value)) {
-          newErrors.regNo = 'Registration number can only contain digits';
-        } else if (value.length < 4) {
-          newErrors.regNo = 'Registration number must be at least 4 digits';
-        } else if (value.length > 12) {
-          newErrors.regNo = 'Registration number cannot exceed 12 digits';
-        } else {
-          newErrors.regNo = '';
-        }
+      case "regNo":
+        if (!value.trim()) newErrors.regNo = "Registration number is required";
+        else if (!validateRegistrationNumber(value))
+          newErrors.regNo = "Registration number can only contain digits";
+        else if (value.length < 4) newErrors.regNo = "Registration number must be at least 4 digits";
+        else if (value.length > 12) newErrors.regNo = "Registration number cannot exceed 12 digits";
+        else newErrors.regNo = "";
         break;
-        
-      case 'department':
-        newErrors.department = !value ? 'Please select a department' : '';
+      case "department":
+        newErrors.department = !value ? "Please select a department" : "";
         break;
-        
-      case 'year':
-        newErrors.year = !value ? 'Please select an academic year' : '';
+      case "year":
+        newErrors.year = !value ? "Please select an academic year" : "";
         break;
-        
+      case "email":
+        if (!value.trim()) newErrors.email = "Email is required";
+        else if (!validateEmail(value)) newErrors.email = "Invalid email format";
+        else newErrors.email = "";
+        break;
       default:
         break;
     }
-    
     setErrors(newErrors);
     return !newErrors[fieldName];
   };
 
-  // Input change handlers with validation
+  // Input change handlers
   const handleNameChange = (text) => {
-    if (validateName(text)) {
-      setEditProfile({ ...editProfile, name: text });
-    }
-    validateField('name', text);
+    if (validateName(text)) setEditProfile({ ...editProfile, name: text });
+    validateField("name", text);
   };
-
   const handleRegNoChange = (text) => {
-    if (validateRegistrationNumber(text)) {
-      setEditProfile({ ...editProfile, regNo: text });
-    }
-    validateField('regNo', text);
+    if (validateRegistrationNumber(text)) setEditProfile({ ...editProfile, regNo: text });
+    validateField("regNo", text);
+  };
+  const handleEmailChange = (text) => {
+    setEditProfile({ ...editProfile, email: text });
+    validateField("email", text);
   };
 
-  const showToast = (message, type = 'success') => {
+  const showToast = (message, type = "success") => {
     setToastMessage(message);
     setToastType(type);
     setToastVisible(true);
-
-    Animated.timing(toastAnimation, {
-      toValue: 1,
-      duration: 300,
-      useNativeDriver: true,
-    }).start();
-
+    Animated.timing(toastAnimation, { toValue: 1, duration: 300, useNativeDriver: true }).start();
     setTimeout(() => {
-      Animated.timing(toastAnimation, {
-        toValue: 0,
-        duration: 300,
-        useNativeDriver: true,
-      }).start(() => {
+      Animated.timing(toastAnimation, { toValue: 0, duration: 300, useNativeDriver: true }).start(() => {
         setToastVisible(false);
       });
     }, 3000);
   };
 
-  const showInfoPopup = (message) => {
-    setInfoMessage(message);
-    setInfoPopupVisible(true);
-  };
-
   const handleUpdateProfile = () => {
-    const { email, ...editableProfile } = userProfile;
-    setEditProfile(editableProfile);
-    setErrors({ name: '', regNo: '', department: '', year: '' });
+    setEditProfile(userProfile);
+    setErrors({ name: "", regNo: "", department: "", year: "", email: "" });
     setEditModalVisible(true);
   };
 
-  const handleSaveProfile = () => {
-    // Validate all fields
-    const isNameValid = validateField('name', editProfile.name);
-    const isRegNoValid = validateField('regNo', editProfile.regNo);
-    const isDepartmentValid = validateField('department', editProfile.department);
-    const isYearValid = validateField('year', editProfile.year);
+  // Save profile, persist to AsyncStorage
+  const handleSaveProfile = async () => {
+    const isNameValid = validateField("name", editProfile.name);
+    const isRegNoValid = validateField("regNo", editProfile.regNo);
+    const isDepartmentValid = validateField("department", editProfile.department);
+    const isYearValid = validateField("year", editProfile.year);
+    const isEmailValid = validateField("email", editProfile.email);
 
-    if (!isNameValid || !isRegNoValid || !isDepartmentValid || !isYearValid) {
-      showToast('Please fix all errors before saving', 'error');
+    if (!isNameValid || !isRegNoValid || !isDepartmentValid || !isYearValid || !isEmailValid) {
+      showToast("Please fix all errors before saving", "error");
       return;
     }
-
-    setUserProfile({ ...editProfile, email: userProfile.email });
+    try {
+      await AsyncStorage.setItem("userProfile", JSON.stringify(editProfile));
+    } catch (e) {
+      showToast("Failed to save profile!", "error");
+      setEditModalVisible(false);
+      return;
+    }
+    setUserProfile(editProfile);
     setEditModalVisible(false);
-    showToast('Profile updated successfully!', 'success');
+    showToast("Profile updated successfully!", "success");
   };
 
   const handleCancelEdit = () => {
-    const { email, ...editableProfile } = userProfile;
-    setEditProfile(editableProfile);
-    setErrors({ name: '', regNo: '', department: '', year: '' });
+    setEditProfile(userProfile);
+    setErrors({ name: "", regNo: "", department: "", year: "", email: "" });
     setEditModalVisible(false);
   };
 
-  // Check if form has errors
-  const hasErrors = () => {
-    return Object.values(errors).some(error => error !== '');
-  };
+  const hasErrors = () => Object.values(errors).some((error) => error !== "");
 
   const renderFormContent = () => (
     <ScrollView style={styles.editContainer} showsVerticalScrollIndicator={false}>
-      {/* Name Input */}
       <View style={styles.inputGroup}>
         <Text style={styles.label}>Full Name *</Text>
         <View style={styles.inputContainer}>
@@ -232,7 +208,6 @@ export default function App() {
         ) : null}
       </View>
 
-      {/* Registration Number Input */}
       <View style={styles.inputGroup}>
         <Text style={styles.label}>Registration Number *</Text>
         <View style={styles.inputContainer}>
@@ -255,25 +230,38 @@ export default function App() {
         ) : null}
       </View>
 
-      {/* Email field - not editable */}
       <View style={styles.inputGroup}>
-        <Text style={styles.label}>Email (Not Editable)</Text>
-        <View style={styles.disabledInputContainer}>
+        <Text style={styles.label}>Email *</Text>
+        <View style={styles.inputContainer}>
           <Ionicons name="mail-outline" size={16} color="#87ceeb" style={styles.icon} />
-          <Text style={styles.disabledInputText}>{userProfile.email}</Text>
+          <TextInput
+            style={[styles.input, errors.email ? styles.errorInput : null]}
+            value={editProfile.email}
+            onChangeText={handleEmailChange}
+            placeholder="Enter your email"
+            placeholderTextColor="#9ca3af"
+            keyboardType="email-address"
+            autoCapitalize="none"
+            maxLength={100}
+          />
         </View>
+        {errors.email ? (
+          <View style={styles.errorContainer}>
+            <Ionicons name="warning" size={16} color="#ef4444" />
+            <Text style={styles.errorText}>{errors.email}</Text>
+          </View>
+        ) : null}
       </View>
 
-      {/* Department Picker */}
       <View style={styles.inputGroup}>
         <Text style={styles.label}>Department *</Text>
         <View style={[styles.pickerContainer, errors.department ? styles.errorInput : null]}>
           <Ionicons name="business-outline" size={16} color="#87ceeb" style={styles.pickerIcon} />
           <Picker
             selectedValue={editProfile.department}
-            onValueChange={(itemValue) => {
-              setEditProfile({ ...editProfile, department: itemValue });
-              validateField('department', itemValue);
+            onValueChange={(val) => {
+              setEditProfile({ ...editProfile, department: val });
+              validateField("department", val);
             }}
             style={styles.picker}
             mode="dropdown"
@@ -292,16 +280,15 @@ export default function App() {
         ) : null}
       </View>
 
-      {/* Year Picker */}
       <View style={styles.inputGroup}>
         <Text style={styles.label}>Academic Year *</Text>
         <View style={[styles.pickerContainer, errors.year ? styles.errorInput : null]}>
           <Ionicons name="school-outline" size={16} color="#87ceeb" style={styles.pickerIcon} />
           <Picker
             selectedValue={editProfile.year}
-            onValueChange={(itemValue) => {
-              setEditProfile({ ...editProfile, year: itemValue });
-              validateField('year', itemValue);
+            onValueChange={(val) => {
+              setEditProfile({ ...editProfile, year: val });
+              validateField("year", val);
             }}
             style={styles.picker}
             mode="dropdown"
@@ -324,12 +311,18 @@ export default function App() {
     </ScrollView>
   );
 
+  if (isLoading) {
+    return (
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#e3f2fd" }}>
+        <ActivityIndicator size="large" color="#232867" />
+      </View>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style="dark" />
-      
       <View style={styles.navigationSpace} />
-      
       <FlatList
         data={[]}
         ListHeaderComponent={() => (
@@ -340,7 +333,6 @@ export default function App() {
               </View>
               <Text style={styles.headerTitle}>Basic User Details</Text>
             </View>
-
             <View style={styles.detailsContainer}>
               <View style={styles.detailRow}>
                 <Text style={styles.profileLabel}>Name:</Text>
@@ -363,74 +355,41 @@ export default function App() {
                 <Text style={styles.value}>{userProfile.year}</Text>
               </View>
             </View>
-
             <TouchableOpacity style={styles.updateButton} onPress={handleUpdateProfile}>
               <Ionicons name="create-outline" size={20} color="#ffffff" style={styles.buttonIcon} />
               <Text style={styles.updateButtonText}>Update Profile</Text>
             </TouchableOpacity>
           </View>
         )}
-        keyExtractor={() => 'main-content'}
+        keyExtractor={() => "main-content"}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContainer}
       />
-
-      {/* Edit Modal */}
-      <Modal
-        visible={isEditModalVisible}
-        animationType="slide"
-        presentationStyle="pageSheet"
-      >
+      <Modal visible={isEditModalVisible} animationType="slide" presentationStyle="pageSheet">
         <SafeAreaView style={styles.modalContainer}>
           <View style={styles.modalHeader}>
             <TouchableOpacity onPress={handleCancelEdit} style={styles.cancelButton}>
               <Text style={styles.cancelButtonText}>Cancel</Text>
             </TouchableOpacity>
             <Text style={styles.modalTitle}>Edit Profile</Text>
-            <TouchableOpacity 
-              onPress={handleSaveProfile} 
+            <TouchableOpacity
+              onPress={handleSaveProfile}
               style={[styles.saveButton, hasErrors() && styles.saveButtonDisabled]}
               disabled={hasErrors()}
             >
               <Text style={[styles.saveButtonText, hasErrors() && styles.saveButtonTextDisabled]}>Save</Text>
             </TouchableOpacity>
           </View>
-
           {renderFormContent()}
         </SafeAreaView>
       </Modal>
 
-      {/* Info Popup Modal */}
-      <Modal
-        visible={infoPopupVisible}
-        animationType="fade"
-        transparent={true}
-        onRequestClose={() => setInfoPopupVisible(false)}
-      >
-        <View style={styles.infoModalOverlay}>
-          <View style={styles.infoModalContent}>
-            <View style={styles.infoModalHeader}>
-              <Ionicons name="information-circle" size={24} color="#5dade2" />
-              <Text style={styles.infoModalTitle}>Information</Text>
-            </View>
-            <Text style={styles.infoModalMessage}>{infoMessage}</Text>
-            <TouchableOpacity
-              style={styles.infoModalButton}
-              onPress={() => setInfoPopupVisible(false)}
-            >
-              <Text style={styles.infoModalButtonText}>Got it</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Toast Notification */}
       {toastVisible && (
         <Animated.View
           style={[
             styles.toastContainer,
             {
-              backgroundColor: toastType === 'success' ? '#10b981' : '#ef4444',
+              backgroundColor: toastType === "success" ? "#10b981" : "#ef4444",
               opacity: toastAnimation,
               transform: [
                 {
@@ -444,7 +403,7 @@ export default function App() {
           ]}
         >
           <Ionicons
-            name={toastType === 'success' ? 'checkmark-circle' : 'close-circle'}
+            name={toastType === "success" ? "checkmark-circle" : "close-circle"}
             size={20}
             color="#ffffff"
             style={styles.toastIcon}
@@ -459,11 +418,11 @@ export default function App() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#e3f2fd',
+    backgroundColor: "#e3f2fd",
   },
   navigationSpace: {
     height: 40,
-    backgroundColor: '#e3f2fd',
+    backgroundColor: "#e3f2fd",
   },
   scrollContainer: {
     flexGrow: 1,
@@ -471,9 +430,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   profileContainer: {
-    backgroundColor: '#ffffff',
+    backgroundColor: "#ffffff",
     borderRadius: 16,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: {
       width: 0,
       height: 2,
@@ -481,69 +440,69 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 12,
     elevation: 6,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#bbdefb',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#bbdefb",
     paddingHorizontal: 20,
     paddingVertical: 18,
     borderBottomWidth: 1,
-    borderBottomColor: '#87ceeb',
+    borderBottomColor: "#87ceeb",
   },
   headerIconContainer: {
     width: 24,
     height: 24,
-    backgroundColor: '#232867',
+    backgroundColor: "#232867",
     borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     marginRight: 10,
   },
   headerTitle: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#232867',
+    fontWeight: "600",
+    color: "#232867",
   },
   detailsContainer: {
     paddingHorizontal: 20,
     paddingVertical: 28,
   },
   detailRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingVertical: 18,
     borderBottomWidth: 1,
-    borderBottomColor: '#e3f2fd',
+    borderBottomColor: "#e3f2fd",
   },
   lastRow: {
     borderBottomWidth: 0,
   },
   profileLabel: {
     fontSize: 15,
-    color: '#3a4285',
-    fontWeight: '500',
+    color: "#3a4285",
+    fontWeight: "500",
   },
   value: {
     fontSize: 15,
-    color: '#1a1f4d',
-    fontWeight: '600',
-    textAlign: 'right',
+    color: "#1a1f4d",
+    fontWeight: "600",
+    textAlign: "right",
     flex: 1,
     marginLeft: 16,
   },
   updateButton: {
-    backgroundColor: '#232867',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: "#232867",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     paddingVertical: 16,
     paddingHorizontal: 24,
     margin: 20,
     borderRadius: 12,
-    shadowColor: '#232867',
+    shadowColor: "#232867",
     shadowOffset: {
       width: 0,
       height: 4,
@@ -556,25 +515,24 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   updateButtonText: {
-    color: '#ffffff',
+    color: "#ffffff",
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
   },
-  // Modal Styles
   modalContainer: {
     flex: 1,
-    backgroundColor: '#e3f2fd',
+    backgroundColor: "#e3f2fd",
   },
   modalHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: 20,
     paddingVertical: 16,
-    backgroundColor: '#ffffff',
+    backgroundColor: "#ffffff",
     borderBottomWidth: 1,
-    borderBottomColor: '#87ceeb',
-    shadowColor: '#000',
+    borderBottomColor: "#87ceeb",
+    shadowColor: "#000",
     shadowOffset: {
       width: 0,
       height: 1,
@@ -589,13 +547,13 @@ const styles = StyleSheet.create({
   },
   cancelButtonText: {
     fontSize: 16,
-    color: '#3a4285',
-    fontWeight: '500',
+    color: "#3a4285",
+    fontWeight: "500",
   },
   modalTitle: {
     fontSize: 18,
-    fontWeight: '600',
-    color: '#232867',
+    fontWeight: "600",
+    color: "#232867",
   },
   saveButton: {
     paddingVertical: 8,
@@ -603,18 +561,18 @@ const styles = StyleSheet.create({
   },
   saveButtonText: {
     fontSize: 16,
-    color: '#5dade2',
-    fontWeight: '600',
+    color: "#5dade2",
+    fontWeight: "600",
   },
   saveButtonDisabled: {
     opacity: 0.5,
   },
   saveButtonTextDisabled: {
-    color: '#87ceeb',
+    color: "#87ceeb",
   },
   editContainer: {
     flex: 1,
-    backgroundColor: '#ffffff',
+    backgroundColor: "#ffffff",
     paddingHorizontal: 20,
     paddingTop: 20,
   },
@@ -623,17 +581,17 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#232867',
+    fontWeight: "600",
+    color: "#232867",
     marginBottom: 8,
   },
   inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f8f9ff',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#f8f9ff",
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#e3f2fd',
+    borderColor: "#e3f2fd",
     paddingHorizontal: 16,
     minHeight: 52,
   },
@@ -643,37 +601,20 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     fontSize: 16,
-    color: '#1a1f4d',
+    color: "#1a1f4d",
     paddingVertical: 14,
   },
   errorInput: {
-    borderColor: '#ef4444',
+    borderColor: "#ef4444",
     borderWidth: 1.5,
   },
-  disabledInputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#bbdefb',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#87ceeb',
-    paddingHorizontal: 16,
-    minHeight: 52,
-  },
-  disabledInputText: {
-    flex: 1,
-    fontSize: 16,
-    color: '#3a4285',
-    paddingVertical: 14,
-  },
-  // Picker Styles (from your provided code)
   pickerContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f8f9ff',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#f8f9ff",
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#e3f2fd',
+    borderColor: "#e3f2fd",
     paddingLeft: 16,
     minHeight: 52,
   },
@@ -683,81 +624,34 @@ const styles = StyleSheet.create({
   picker: {
     flex: 1,
     height: 52,
-    color: '#232867',
+    color: "#232867",
   },
   errorContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginTop: 6,
   },
   errorText: {
-    color: '#ef4444',
+    color: "#ef4444",
     fontSize: 13,
-    fontWeight: '500',
+    fontWeight: "500",
     marginLeft: 4,
     flex: 1,
   },
   bottomSpacing: {
     height: 100,
   },
-  // Info Modal Styles
-  infoModalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(35, 40, 103, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-  },
-  infoModalContent: {
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    padding: 24,
-    width: '100%',
-    maxWidth: 400,
-    borderWidth: 2,
-    borderColor: '#87ceeb',
-  },
-  infoModalHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  infoModalTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#232867',
-    marginLeft: 8,
-  },
-  infoModalMessage: {
-    fontSize: 16,
-    color: '#3a4285',
-    lineHeight: 24,
-    marginBottom: 20,
-  },
-  infoModalButton: {
-    backgroundColor: '#5dade2',
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 10,
-    alignItems: 'center',
-  },
-  infoModalButtonText: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  // Toast Styles
   toastContainer: {
-    position: 'absolute',
+    position: "absolute",
     top: 60,
     left: 20,
     right: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: 20,
     paddingVertical: 16,
     borderRadius: 12,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: {
       width: 0,
       height: 4,
@@ -773,7 +667,7 @@ const styles = StyleSheet.create({
   toastMessage: {
     flex: 1,
     fontSize: 16,
-    fontWeight: '600',
-    color: '#ffffff',
+    fontWeight: "600",
+    color: "#ffffff",
   },
 });

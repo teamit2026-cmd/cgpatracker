@@ -1,8 +1,11 @@
 import React from 'react';
-import { StyleSheet, Text, View, ScrollView, TouchableOpacity, } from 'react-native';
+import { StyleSheet, Text, View, ScrollView, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
 
 export default function AboutCGPATracker() {
+  const navigation = useNavigation();
+
   return (
     <SafeAreaView style={styles.safeArea}>
       {/* Navigation Bar with bottom shadow only */}
@@ -27,7 +30,7 @@ export default function AboutCGPATracker() {
 
         <View style={styles.featuresGrid}>
           <View style={styles.featureBox}>
-            <Text style={styles.featureTitle}>Lightning Fast</Text>
+            <Text style={styles.featureTitle}>Smooth Transition</Text>
             <Text style={styles.featureDesc}>Calculate your CGPA instantly with our optimized algorithms</Text>
           </View>
           <View style={styles.featureBox}>
@@ -53,26 +56,42 @@ export default function AboutCGPATracker() {
         </View>
 
         <Text style={styles.sectionTitle}>Meet the Team</Text>
+
         <View style={styles.teamBox}>
-          <Text style={styles.teamRole}>Lead Developer</Text>
-          <Text style={styles.teamDesc}>Full Stack Development & Architecture</Text>
+          <Text style={styles.teamRole}>Team Lead</Text>
+          <Text style={styles.teamDesc}>Dhanush</Text>
         </View>
+
         <View style={styles.teamBox}>
-          <Text style={styles.teamRole}>Web Designer</Text>
-          <Text style={styles.teamDesc}>User Interface & Experience Design</Text>
+          <Text style={styles.teamRole}>Web Designer & Developer</Text>
+          <Text style={styles.teamDesc}>Keerthikeshan</Text>
         </View>
+
         <View style={styles.teamBox}>
-          <Text style={styles.teamRole}>Quality Assurance</Text>
-          <Text style={styles.teamDesc}>Testing & Bug Detection</Text>
+          <Text style={styles.teamRole}>Testing & Developer</Text>
+          <Text style={styles.teamDesc}>Barath</Text>
         </View>
+
+        <View style={styles.teamBox}>
+          <Text style={styles.teamRole}>Logic & Developer</Text>
+          <Text style={styles.teamDesc}>Loguesvaran</Text>
+        </View>
+
+        <View style={styles.teamBox}>
+          <Text style={styles.teamRole}>Data Analysis & Developer</Text>
+          <Text style={styles.teamDesc}>Krishnarajan</Text>
+        </View>
+
         <View style={styles.ctaBox}>
           <Text style={styles.ctaTitle}>Ready to Calculate Your CGPA?</Text>
           <Text style={styles.ctaDesc}>Join with thousands of students who trust our calculator for accurate grade calculations</Text>
-          <TouchableOpacity style={styles.ctaButton}>
+          <TouchableOpacity
+            style={styles.ctaButton}
+            onPress={() => navigation.navigate('CGPACalculator')}
+          >
             <Text style={styles.ctaButtonText}>START CALCULATING</Text>
           </TouchableOpacity>
         </View>
-
       </ScrollView>
     </SafeAreaView>
   );
@@ -83,20 +102,15 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#BEDFFA',
   },
-  // Navigation bar style with bottom shadow only
   navBar: {
     alignItems: 'center',
     justifyContent: 'center',
     height: 50,
     backgroundColor: '#fff',
-
-    // iOS shadow (bottom only)
     shadowColor: '#232867',
     shadowOpacity: 0.15,
-    shadowOffset: { width: 0, height: 6 }, // Only bottom
+    shadowOffset: { width: 0, height: 6 },
     shadowRadius: 7,
-
-    // Android shadow (bottom only)
     elevation: 10,
     zIndex: 1,
     marginTop: 0,

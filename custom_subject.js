@@ -14,7 +14,6 @@ import { FontAwesome5 } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-
 // Preview Card Component (embedded)
 const PreviewCard = ({ subject, onRemove }) => (
   <View style={styles.previewCard}>
@@ -35,7 +34,6 @@ const GradeCard = ({ subject, selectedGrade, onGradeChange, gradeOptions }) => (
       <Text style={styles.subjectName}>{subject.name}</Text>
       <Text style={styles.subjectDetails}>{subject.code} • {subject.credits} credits</Text>
     </View>
-    
     <View style={styles.gradeButtonsContainer}>
       {gradeOptions.map((grade) => (
         <TouchableOpacity
@@ -44,8 +42,7 @@ const GradeCard = ({ subject, selectedGrade, onGradeChange, gradeOptions }) => (
             styles.gradeButton,
             selectedGrade === grade && styles.gradeButtonSelected
           ]}
-          onPress={() => onGradeChange(grade)}
-        >
+          onPress={() => onGradeChange(grade)}>
           <Text style={[
             styles.gradeButtonText,
             selectedGrade === grade && styles.gradeButtonTextSelected
@@ -62,21 +59,16 @@ const GradeCard = ({ subject, selectedGrade, onGradeChange, gradeOptions }) => (
 export default function CombinedCGPATracker() {
   // Navigation state
   const [currentScreen, setCurrentScreen] = useState('input');
-  
-  // Subject management state
   const [subjects, setSubjects] = useState([]);
   const [currentSubject, setCurrentSubject] = useState({
     name: '',
     code: '',
     credits: '',
   });
-  
   // Grade management state
   const [grades, setGrades] = useState({});
-  
   // Fixed: Moved isSaved to top level to fix hooks error
   const [isSaved, setIsSaved] = useState(false);
-  
   // Grade points mapping
   const gradePoints = {
     'S': 10,
@@ -94,19 +86,16 @@ export default function CombinedCGPATracker() {
       Alert.alert('Error', 'Please fill all fields');
       return;
     }
-
     if (isNaN(currentSubject.credits) || parseFloat(currentSubject.credits) <= 0) {
       Alert.alert('Error', 'Credits must be a valid positive number');
       return;
     }
-
     const newSubject = {
       id: Date.now().toString(),
       name: currentSubject.name,
       code: currentSubject.code,
       credits: parseFloat(currentSubject.credits),
     };
-
     setSubjects([...subjects, newSubject]);
     setCurrentSubject({ name: '', code: '', credits: '' });
   };
@@ -146,7 +135,6 @@ export default function CombinedCGPATracker() {
       );
       return;
     }
-
     setCurrentScreen('results');
   };
 
@@ -163,14 +151,12 @@ export default function CombinedCGPATracker() {
   const calculateCurrentCGPA = () => {
     let totalPoints = 0;
     let totalCredits = 0;
-
     subjects.forEach(subject => {
       const grade = grades[subject.id];
       const points = gradePoints[grade];
       totalPoints += points * subject.credits;
       totalCredits += subject.credits;
     });
-
     return totalCredits > 0 ? (totalPoints / totalCredits).toFixed(2) : 0;
   };
 
@@ -192,7 +178,6 @@ export default function CombinedCGPATracker() {
         subtitle = 'Your academic performance summary';
         break;
     }
-
     return (
       <View style={styles.headerContainer}>
         <View style={styles.logoContainer}>
@@ -213,39 +198,37 @@ export default function CombinedCGPATracker() {
         <View style={styles.screenContent}>
           <View style={styles.inputContainer}>
             <Text style={styles.sectionTitle}>Subject Details</Text>
-            
             <TextInput
               style={styles.input}
               placeholder="Subject Name"
               value={currentSubject.name}
               onChangeText={(text) => setCurrentSubject({ ...currentSubject, name: text })}
+              placeholderTextColor="#555555ff" // Set your preferred color here
             />
-            
+
             <TextInput
               style={styles.input}
               placeholder="Subject Code"
               value={currentSubject.code}
               onChangeText={(text) => setCurrentSubject({ ...currentSubject, code: text })}
+              placeholderTextColor="#555555ff" 
             />
-            
             <TextInput
               style={styles.input}
               placeholder="Credits"
               value={currentSubject.credits}
               onChangeText={(text) => setCurrentSubject({ ...currentSubject, credits: text })}
               keyboardType="numeric"
+              placeholderTextColor="#555555ff" 
             />
-            
             <TouchableOpacity style={styles.addButton} onPress={addSubject}>
               <FontAwesome5 name="plus" size={16} color="white" style={{ marginRight: 8 }} />
               <Text style={styles.addButtonText}>Add Subject</Text>
             </TouchableOpacity>
           </View>
-
           {subjects.length > 0 && (
             <View style={styles.previewContainer}>
               <Text style={styles.sectionTitle}>Preview ({subjects.length} subjects)</Text>
-              
               <FlatList
                 data={subjects}
                 keyExtractor={item => item.id}
@@ -258,7 +241,6 @@ export default function CombinedCGPATracker() {
                 scrollEnabled={false}
                 showsVerticalScrollIndicator={false}
               />
-              
               <TouchableOpacity style={styles.proceedButton} onPress={proceedToGrades}>
                 <FontAwesome5 name="arrow-right" size={16} color="white" style={{ marginRight: 8 }} />
                 <Text style={styles.proceedButtonText}>Proceed to Grade Selection</Text>
@@ -286,7 +268,6 @@ export default function CombinedCGPATracker() {
               />
             ))}
           </View>
-          
           <TouchableOpacity style={styles.calculateButton} onPress={calculateCGPA}>
             <FontAwesome5 name="calculator" size={16} color="white" style={{ marginRight: 8 }} />
             <Text style={styles.calculateButtonText}>Calculate CGPA</Text>
@@ -296,69 +277,34 @@ export default function CombinedCGPATracker() {
     </ScrollView>
   );
 
-  // Fixed Results Screen Content - Gradient background only
+  // Results Screen Content - Gradient background only
   const renderResults = () => {
     const cgpa = calculateCurrentCGPA();
-
-    const handleSave = () => {
-      setIsSaved(true);
-      setTimeout(() => setIsSaved(false), 3000);
-      Alert.alert('Success', 'CGPA saved successfully!');
-    };
-
-    const renderFloatingElements = () => {
-      return (
-        <View style={celebratoryStyles.floatingContainer}>
-          <View style={[celebratoryStyles.floatingElement, { top: '15%', left: '25%' }]}>
-            <FontAwesome5 name="star" size={12} color="#FFD700" />
-          </View>
-          <View style={[celebratoryStyles.floatingElement, { top: '20%', right: '20%' }]}>
-            <FontAwesome5 name="star" size={10} color="#FF69B4" />
-          </View>
-          <View style={[celebratoryStyles.floatingElement, { top: '35%', left: '15%' }]}>
-            <View style={[celebratoryStyles.diamond, { backgroundColor: '#00CED1' }]} />
-          </View>
-          <View style={[celebratoryStyles.floatingElement, { top: '25%', right: '30%' }]}>
-            <View style={[celebratoryStyles.diamond, { backgroundColor: '#FFD700' }]} />
-          </View>
-          <View style={[celebratoryStyles.floatingElement, { top: '30%', left: '35%' }]}>
-            <FontAwesome5 name="star" size={8} color="#00CED1" />
-          </View>
-          <View style={[celebratoryStyles.floatingElement, { top: '40%', right: '25%' }]}>
-            <View style={[celebratoryStyles.diamond, { backgroundColor: '#FF69B4' }]} />
-          </View>
-          <View style={[celebratoryStyles.floatingElement, { top: '65%', left: '20%' }]}>
-            <FontAwesome5 name="star" size={14} color="#FFD700" />
-          </View>
+    const renderFloatingElements = () => (
+      <View style={celebratoryStyles.floatingContainer}>
+        <View style={[celebratoryStyles.floatingElement, { top: '15%', left: '25%' }]}>
+          <FontAwesome5 name="star" size={12} color="#FFD700" />
         </View>
-      );
-    };
-
-    const renderJellyfish = () => {
-      return (
-        <View style={celebratoryStyles.jellyfishContainer}>
-          {/* Left Jellyfish */}
-          {/* <View style={[celebratoryStyles.jellyfish, celebratoryStyles.leftJellyfish]}>
-            <View style={[celebratoryStyles.jellyfishHead, { backgroundColor: '#FFA500' }]} />
-            <View style={celebratoryStyles.jellyfishTentacles}>
-              <View style={[celebratoryStyles.tentacle, { height: 30, backgroundColor: '#00CED1' }]} />
-              <View style={[celebratoryStyles.tentacle, { height: 25, backgroundColor: '#9370DB' }]} />
-              <View style={[celebratoryStyles.tentacle, { height: 35, backgroundColor: '#32CD32' }]} />
-            </View>
-          </View> */}
-
-          {/* Right Jellyfish */}
-          {/* <View style={[celebratoryStyles.jellyfish, celebratoryStyles.rightJellyfish]}>
-            <View style={[celebratoryStyles.jellyfishHead, { backgroundColor: '#FFA500' }]} />
-            <View style={celebratoryStyles.jellyfishTentacles}>
-              <View style={[celebratoryStyles.tentacle, { height: 28, backgroundColor: '#FF4500' }]} />
-              <View style={[celebratoryStyles.tentacle, { height: 32, backgroundColor: '#FFD700' }]} />
-              <View style={[celebratoryStyles.tentacle, { height: 26, backgroundColor: '#1E90FF' }]} />
-            </View>
-          </View> */}
+        <View style={[celebratoryStyles.floatingElement, { top: '20%', right: '20%' }]}>
+          <FontAwesome5 name="star" size={10} color="#FF69B4" />
         </View>
-      );
-    };
+        <View style={[celebratoryStyles.floatingElement, { top: '35%', left: '15%' }]}>
+          <View style={[celebratoryStyles.diamond, { backgroundColor: '#00CED1' }]} />
+        </View>
+        <View style={[celebratoryStyles.floatingElement, { top: '25%', right: '30%' }]}>
+          <View style={[celebratoryStyles.diamond, { backgroundColor: '#FFD700' }]} />
+        </View>
+        <View style={[celebratoryStyles.floatingElement, { top: '30%', left: '35%' }]}>
+          <FontAwesome5 name="star" size={8} color="#00CED1" />
+        </View>
+        <View style={[celebratoryStyles.floatingElement, { top: '40%', right: '25%' }]}>
+          <View style={[celebratoryStyles.diamond, { backgroundColor: '#FF69B4' }]} />
+        </View>
+        <View style={[celebratoryStyles.floatingElement, { top: '65%', left: '20%' }]}>
+          <FontAwesome5 name="star" size={14} color="#FFD700" />
+        </View>
+      </View>
+    );
 
     return (
       <LinearGradient
@@ -368,19 +314,15 @@ export default function CombinedCGPATracker() {
         style={celebratoryStyles.gradientContainer}
       >
         {renderFloatingElements()}
-        {renderJellyfish()}
-        
         <View style={celebratoryStyles.contentContainer}>
           {/* Semester Display */}
           <Text style={celebratoryStyles.semesterText}>
             Custom Subject CGPA
           </Text>
-
           {/* CGPA Display */}
           <Text style={celebratoryStyles.cgpaText}>
             CGPA: {cgpa}
           </Text>
-
           {/* Congratulatory Message */}
           <View style={celebratoryStyles.messageContainer}>
             <FontAwesome5 name="trophy" size={22} color="#FFD700" style={celebratoryStyles.trophyIcon} />
@@ -393,7 +335,7 @@ export default function CombinedCGPATracker() {
     );
   };
 
-  // Fixed: Apply gradient background to all screens
+  // Apply gradient background to all screens
   if (currentScreen === 'results') {
     return (
       <View style={{ flex: 1 }}>
@@ -404,23 +346,16 @@ export default function CombinedCGPATracker() {
   }
 
   return (
-    // <LinearGradient
-    //   colors={['#87CEEB', '#B0E0E6', '#E0F6FF']}
-    //   start={{ x: 0, y: 0 }}
-    //   end={{ x: 1, y: 1 }}
-    //   style={{ flex: 1 }}
-    // >
-      <SafeAreaView style={styles.containerTransparent}>
-        <StatusBar backgroundColor="transparent" translucent barStyle="dark-content" />
-        {renderHeader()}
-        {currentScreen === 'input' && renderSubjectInput()}
-        {currentScreen === 'grades' && renderGradeSelection()}
-      </SafeAreaView>
-    // </LinearGradient>
+    <SafeAreaView style={styles.containerTransparent}>
+      <StatusBar backgroundColor="transparent" translucent barStyle="dark-content" />
+      {renderHeader()}
+      {currentScreen === 'input' && renderSubjectInput()}
+      {currentScreen === 'grades' && renderGradeSelection()}
+    </SafeAreaView>
   );
 }
 
-// Updated Styles with gradient fixes
+// --- styles objects (styles and celebratoryStyles) remain unchanged from your snippet above ---
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -675,6 +610,7 @@ const styles = StyleSheet.create({
   },
 });
 
+
 // Fixed Celebratory Styles - Gradient only
 const celebratoryStyles = StyleSheet.create({
   gradientContainer: {
@@ -781,5 +717,4 @@ const celebratoryStyles = StyleSheet.create({
     textAlign: 'center',
     flex: 1,
   },
-
 });
