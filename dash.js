@@ -11,13 +11,13 @@ import {
   Image,
   StatusBar,
   Dimensions,
-  PixelRatio,
-  Platform
+  Platform,
+  BackHandler,
 } from 'react-native';
 import { Ionicons, MaterialIcons, Entypo } from '@expo/vector-icons';
 import Constants from 'expo-constants';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
+import { useFocusEffect } from '@react-navigation/native';
 
 const { width, height } = Dimensions.get('window');
 
@@ -33,41 +33,62 @@ const Dashboard = ({ navigation }) => {
   const [menuVisible, setMenuVisible] = useState(false);
   const [profileVisible, setProfileVisible] = useState(false);
 
-  // Configure status bar consistently
+  // StatusBar setup (global)
   useEffect(() => {
     StatusBar.setBarStyle('dark-content', true);
     if (Platform.OS === 'android') {
       StatusBar.setBackgroundColor('#ffffff', true);
-      StatusBar.setTranslucent(false); // Important: prevents navbar overlap
+      StatusBar.setTranslucent(false);
     }
   }, []);
+
+  // Back button handler - active only when this screen is focused
+  useFocusEffect(
+    React.useCallback(() => {
+      const backAction = () => {
+        if (menuVisible) {
+          setMenuVisible(false);
+          return true; // handled here: close menu
+        }
+        if (profileVisible) {
+          setProfileVisible(false);
+          return true; // handled here: close profile dropdown
+        }
+
+        BackHandler.exitApp(); // exit app if no modals open
+        return true; // prevent default back action
+      };
+
+      const backHandler = BackHandler.addEventListener(
+        'hardwareBackPress',
+        backAction
+      );
+
+      return () => backHandler.remove(); // cleanup when screen loses focus
+    }, [menuVisible, profileVisible])
+  );
 
   const navigateTo = (screen) => {
     setMenuVisible(false);
     setProfileVisible(false);
 
-    if (screen === 'About') {
-      navigation.navigate('About');
-    } else if (screen === 'Feedback') {
-      navigation.navigate('Feedback');
-    }
-    else if (screen === 'Privacy') {
-      navigation.navigate('Privacy');
-    } else if (screen === 'CGPAProgressAnalysis') {
-      navigation.navigate('CGPAProgressAnalysis');
-    } else if (screen === 'PrivacyPolicy') {
-      navigation.navigate('PrivacyPolicy');
-    } else if (screen === 'ViewProfile') {
-      navigation.navigate('ViewProfile');
-    }
-    else if (screen === 'CGPACalculator') {
-      navigation.navigate('CGPACalculator');
-    } else if (screen === 'Download') {
-      navigation.navigate('Download');
-    } else if (screen === 'Logout') {
-      alert('Logout functionality to be implemented');
-    } else {
-      alert(`Navigate to: ${screen}`);
+    switch (screen) {
+      case 'About':
+      case 'Feedback':
+      case 'Privacy':
+      case 'CGPAProgressAnalysis':
+      case 'PrivacyPolicy':
+      case 'ViewProfile':
+      case 'CGPACalculator':
+      case 'Download':
+        navigation.navigate(screen);
+        break;
+      case 'Logout':
+        alert('Logout functionality to be implemented');
+        break;
+      default:
+        alert(`Navigate to: ${screen}`);
+        break;
     }
   };
 
@@ -113,7 +134,8 @@ const Dashboard = ({ navigation }) => {
             </Animated.Text>
           </View>
           <Text style={styles.welcomeSubtitle}>
-            Ready to check your <Text style={styles.highlight}>CGPA progress</Text> today?
+            Ready to check your{' '}
+            <Text style={styles.highlight}>CGPA progress</Text> today?
           </Text>
         </View>
         <Image
@@ -163,6 +185,7 @@ const Dashboard = ({ navigation }) => {
           </TouchableOpacity>
         </View>
       </SafeAreaView>
+
       {/* Content Area */}
       <View style={styles.contentArea}>
         <WelcomeSection userName="Robert" />
@@ -173,7 +196,10 @@ const Dashboard = ({ navigation }) => {
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.row}>
-            <TouchableOpacity style={styles.card} onPress={() => navigateTo('CGPACalculator')}>
+            <TouchableOpacity
+              style={styles.card}
+              onPress={() => navigateTo('CGPACalculator')}
+            >
               <MaterialIcons name="calculate" size={40} color="#fff" />
               <Text style={styles.cardTitle}>CGPA Calculator</Text>
             </TouchableOpacity>
@@ -186,11 +212,17 @@ const Dashboard = ({ navigation }) => {
             </TouchableOpacity>
           </View>
           <View style={styles.row}>
-            <TouchableOpacity style={styles.card} onPress={() => navigateTo('Share')}>
+            <TouchableOpacity
+              style={styles.card}
+              onPress={() => navigateTo('Share')}
+            >
               <MaterialIcons name="share" size={40} color="#fff" />
               <Text style={styles.cardTitle}>Share</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.card} onPress={() => navigateTo('Download')}>
+            <TouchableOpacity
+              style={styles.card}
+              onPress={() => navigateTo('Download')}
+            >
               <MaterialIcons name="download" size={40} color="#fff" />
               <Text style={styles.cardTitle}>Export as PDF</Text>
             </TouchableOpacity>
@@ -211,16 +243,33 @@ const Dashboard = ({ navigation }) => {
           onPressOut={() => setMenuVisible(false)}
         >
           <View style={styles.menu}>
-            <TouchableOpacity style={styles.menuItem} onPress={() => navigateTo('About')}>
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => navigateTo('About')}
+            >
               <Entypo name="info-with-circle" size={18} color="#232867" />
               <Text style={styles.menuText}>About</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.menuItem} onPress={() => navigateTo('Feedback')}>
-              <Ionicons name="chatbox-ellipses-outline" size={18} color="#232867" />
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => navigateTo('Feedback')}
+            >
+              <Ionicons
+                name="chatbox-ellipses-outline"
+                size={18}
+                color="#232867"
+              />
               <Text style={styles.menuText}>Feedback</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.menuItem} onPress={() => navigateTo('Privacy')}>
-              <Ionicons name="lock-closed-outline" size={18} color="#232867" />
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => navigateTo('Privacy')}
+            >
+              <Ionicons
+                name="lock-closed-outline"
+                size={18}
+                color="#232867"
+              />
               <Text style={styles.menuText}>Privacy Policy</Text>
             </TouchableOpacity>
           </View>
@@ -240,7 +289,10 @@ const Dashboard = ({ navigation }) => {
           onPressOut={() => setProfileVisible(false)}
         >
           <View style={[styles.menu, styles.profileMenu]}>
-            <TouchableOpacity style={styles.menuItem} onPress={() => navigateTo('ViewProfile')}>
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => navigateTo('ViewProfile')}
+            >
               <Ionicons name="person-outline" size={18} color="#232867" />
               <Text style={styles.menuText}>View Profile</Text>
             </TouchableOpacity>
@@ -265,14 +317,10 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     backgroundColor: '#ffffff',
     paddingHorizontal: 16,
-    paddingVertical: 12,         // Responsive vertical padding
+    paddingVertical: 12, // Responsive vertical padding
     borderBottomWidth: 1,
     borderBottomColor: '#e2e8f0',
-    // Removed marginTop and shadow properties for consistency
-    // You can add: paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0
-    // for StatusBar space if needed
   },
-
 
   navButton: {
     width: 40,
