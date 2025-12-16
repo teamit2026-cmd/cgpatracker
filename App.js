@@ -15,6 +15,7 @@ import Result from './Result.js';
 import CustomSubject from './custom_subject.js';
 import Download from './Download.js';
 import Privacy from './Privacy.js';
+import SyllabusCal from './SyllabusCal.js'
 
 const Stack = createStackNavigator();
 
@@ -67,6 +68,10 @@ function App() {
         <Stack.Screen 
           name="CGPACalculator" 
           component={CGPACalculator}
+        />
+        <Stack.Screen 
+          name="SyllabusCal" 
+          component={SyllabusCal}
         />
         <Stack.Screen 
           name="CustomSubject" 

@@ -81,6 +81,7 @@ const Dashboard = ({ navigation }) => {
       case 'ViewProfile':
       case 'CGPACalculator':
       case 'Download':
+      case 'SyllabusCal':
         navigation.navigate(screen);
         break;
       case 'Logout':
@@ -214,10 +215,10 @@ const Dashboard = ({ navigation }) => {
           <View style={styles.row}>
             <TouchableOpacity
               style={styles.card}
-              onPress={() => navigateTo('Share')}
+              onPress={() => navigateTo('SyllabusCal')}
             >
-              <MaterialIcons name="share" size={40} color="#fff" />
-              <Text style={styles.cardTitle}>Share</Text>
+              <MaterialIcons name="calendar-today" size={40} color="#fff" />
+              <Text style={styles.cardTitle}>Syllabus Calendar</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.card}
