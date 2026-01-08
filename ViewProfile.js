@@ -16,12 +16,14 @@ import { StatusBar } from "expo-status-bar";
 import { Ionicons } from "@expo/vector-icons";
 import { Picker } from "@react-native-picker/picker";
 import { SafeAreaView } from "react-native-safe-area-context";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+
+// Realm Services
+import UserService from './database/services/UserService';
 
 const { height: screenHeight } = Dimensions.get("window");
 
-export default function App() {
-  // User profile state will be loaded from AsyncStorage
+export default function ViewProfile() {
+  // User profile state will be loaded from Realm
   const [userProfile, setUserProfile] = useState({
     name: "",
     regNo: "",
@@ -29,8 +31,8 @@ export default function App() {
     year: "",
     email: "",
   });
+  const [currentUserId, setCurrentUserId] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
-
   const [isEditModalVisible, setEditModalVisible] = useState(false);
   const [editProfile, setEditProfile] = useState(userProfile);
   const [errors, setErrors] = useState({
@@ -40,8 +42,6 @@ export default function App() {
     year: "",
     email: "",
   });
-  const [infoPopupVisible, setInfoPopupVisible] = useState(false);
-  const [infoMessage, setInfoMessage] = useState("");
   const [toastVisible, setToastVisible] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
   const [toastType, setToastType] = useState("success");
@@ -49,9 +49,9 @@ export default function App() {
 
   // Options for dropdowns
   const departmentOptions = [
-    { label: "Information Technology (IT)", value: "Information Technology" },
-    { label: "Computer Science Engineering (CSE)", value: "Computer Science Engineering" },
-    { label: "Electronics & Communication Engineering (ECE)", value: "Electronics & Communication Engineering" }
+    { label: "Information Technology (IT)", value: "IT" },
+    { label: "Computer Science Engineering (CSE)", value: "CSE" },
+    { label: "Electrical & Electronics Engineering (EEE)", value: "EEE" }
   ];
 
   const yearOptions = [
@@ -61,20 +61,59 @@ export default function App() {
     { label: "IV", value: "IV" },
   ];
 
-  // Load stored profile on mount
+  // Load stored profile from Realm
   useEffect(() => {
-    (async () => {
-      try {
-        const stor = await AsyncStorage.getItem("userProfile");
-        if (stor) {
-          setUserProfile(JSON.parse(stor));
-        }
-      } catch (e) {
-        console.log("Error loading user profile from storage", e);
-      }
-      setIsLoading(false);
-    })();
+    loadUserProfile();
   }, []);
+
+  const loadUserProfile = async () => {
+    try {
+      setIsLoading(true);
+      const user = await UserService.getCurrentUser();
+      
+      if (user) {
+        // User exists in Realm
+        setUserProfile({
+          name: user.name || "",
+          regNo: user.regNo || "",
+          department: user.department || "",
+          year: user.year || "",
+          email: user.email || "",
+        });
+        setCurrentUserId(user.id);
+      } else {
+        // No user exists, create a default one with VALID values
+        await createDefaultUser();
+      }
+    } catch (error) {
+      console.log("❌ Error loading user profile from Realm:", error);
+      showToast("Error loading profile: " + error.message, "error");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // 🚨 FIXED: Create default user with valid values
+  const createDefaultUser = async () => {
+    try {
+      const defaultUser = {
+        name: "New User",
+        regNo: "000000",
+        department: "IT", // Use department codes that match your CGPA calculator
+        year: "I",
+        email: "user@example.com",
+        isActive: true
+      };
+      console.log("🔄 Creating default user:", defaultUser);
+      const savedUser = await UserService.saveUser(defaultUser);
+      setUserProfile(defaultUser);
+      setCurrentUserId(savedUser.id);
+      console.log("✅ Default user created successfully");
+    } catch (error) {
+      console.log("❌ Error creating default user:", error);
+      showToast("Error creating profile: " + error.message, "error");
+    }
+  };
 
   // Whenever userProfile changes, update editProfile state
   useEffect(() => {
@@ -153,7 +192,7 @@ export default function App() {
     setEditModalVisible(true);
   };
 
-  // Save profile, persist to AsyncStorage
+  // 🚨 FIXED: Save profile with better error handling
   const handleSaveProfile = async () => {
     const isNameValid = validateField("name", editProfile.name);
     const isRegNoValid = validateField("regNo", editProfile.regNo);
@@ -165,16 +204,46 @@ export default function App() {
       showToast("Please fix all errors before saving", "error");
       return;
     }
+
     try {
-      await AsyncStorage.setItem("userProfile", JSON.stringify(editProfile));
-    } catch (e) {
-      showToast("Failed to save profile!", "error");
-      setEditModalVisible(false);
-      return;
+      // Get current user to update
+      const currentUser = await UserService.getCurrentUser();
+      
+      if (currentUser) {
+        // UPDATE existing user
+        console.log("🔄 Updating user profile:", editProfile);
+        await UserService.saveUser({
+          id: currentUser.id,
+          name: editProfile.name.trim(),
+          regNo: editProfile.regNo.trim(),
+          department: editProfile.department,
+          year: editProfile.year,
+          email: editProfile.email.trim(),
+          isActive: true,
+        });
+        setUserProfile(editProfile);
+        setEditModalVisible(false);
+        showToast("Profile updated successfully!", "success");
+      } else {
+        // Create new user
+        console.log("🔄 Creating new user profile:", editProfile);
+        const savedUser = await UserService.saveUser({
+          name: editProfile.name.trim(),
+          regNo: editProfile.regNo.trim(),
+          department: editProfile.department,
+          year: editProfile.year,
+          email: editProfile.email.trim(),
+          isActive: true,
+        });
+        setUserProfile(editProfile);
+        setCurrentUserId(savedUser.id);
+        setEditModalVisible(false);
+        showToast("Profile created successfully!", "success");
+      }
+    } catch (error) {
+      console.log("❌ Error saving profile to Realm:", error);
+      showToast("Failed to save profile: " + error.message, "error");
     }
-    setUserProfile(editProfile);
-    setEditModalVisible(false);
-    showToast("Profile updated successfully!", "success");
   };
 
   const handleCancelEdit = () => {
@@ -315,6 +384,7 @@ export default function App() {
     return (
       <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#e3f2fd" }}>
         <ActivityIndicator size="large" color="#232867" />
+        <Text style={{ marginTop: 10, color: "#232867" }}>Loading profile...</Text>
       </View>
     );
   }
@@ -336,23 +406,23 @@ export default function App() {
             <View style={styles.detailsContainer}>
               <View style={styles.detailRow}>
                 <Text style={styles.profileLabel}>Name:</Text>
-                <Text style={styles.value}>{userProfile.name}</Text>
+                <Text style={styles.value}>{userProfile.name || "Not set"}</Text>
               </View>
               <View style={styles.detailRow}>
                 <Text style={styles.profileLabel}>Reg No:</Text>
-                <Text style={styles.value}>{userProfile.regNo}</Text>
+                <Text style={styles.value}>{userProfile.regNo || "Not set"}</Text>
               </View>
               <View style={styles.detailRow}>
                 <Text style={styles.profileLabel}>Email:</Text>
-                <Text style={styles.value}>{userProfile.email}</Text>
+                <Text style={styles.value}>{userProfile.email || "Not set"}</Text>
               </View>
               <View style={styles.detailRow}>
                 <Text style={styles.profileLabel}>Department:</Text>
-                <Text style={styles.value}>{userProfile.department}</Text>
+                <Text style={styles.value}>{userProfile.department || "Not set"}</Text>
               </View>
               <View style={[styles.detailRow, styles.lastRow]}>
                 <Text style={styles.profileLabel}>Year:</Text>
-                <Text style={styles.value}>{userProfile.year}</Text>
+                <Text style={styles.value}>{userProfile.year || "Not set"}</Text>
               </View>
             </View>
             <TouchableOpacity style={styles.updateButton} onPress={handleUpdateProfile}>
@@ -415,6 +485,7 @@ export default function App() {
   );
 }
 
+// Keep all your existing styles - they are fine
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -433,10 +504,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#ffffff",
     borderRadius: 16,
     shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 12,
     elevation: 6,
@@ -503,10 +571,7 @@ const styles = StyleSheet.create({
     margin: 20,
     borderRadius: 12,
     shadowColor: "#232867",
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 8,
@@ -533,10 +598,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "#87ceeb",
     shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
+    shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 3,
     elevation: 3,
@@ -652,10 +714,7 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderRadius: 12,
     shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 8,
     elevation: 10,

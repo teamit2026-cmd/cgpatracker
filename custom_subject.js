@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+// components/CustomSubject.js - UPDATED VERSION
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,54 +10,23 @@ import {
   Alert,
   FlatList,
   StatusBar,
+  Dimensions,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { FontAwesome5 } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import CustomSubjectService from './database/services/CustomSubjectService';
+import ResultService from './database/services/ResultService';
+import UserService from './database/services/UserService';
+import SubjectCard from './components/SubjectCard';
+import PreviewCard from './components/PreviewCard';
+import PrimaryButton from './components/PrimaryButton';
 
-// Preview Card Component (embedded)
-const PreviewCard = ({ subject, onRemove }) => (
-  <View style={styles.previewCard}>
-    <View style={styles.previewContent}>
-      <Text style={styles.previewName}>{subject.name}</Text>
-      <Text style={styles.previewDetails}>{subject.code} • {subject.credits} credits</Text>
-    </View>
-    <TouchableOpacity style={styles.removeButton} onPress={onRemove}>
-      <Text style={styles.removeButtonText}>X</Text>
-    </TouchableOpacity>
-  </View>
-);
-
-// Grade Selection Card Component (embedded)
-const GradeCard = ({ subject, selectedGrade, onGradeChange, gradeOptions }) => (
-  <View style={styles.gradeCard}>
-    <View style={styles.subjectInfo}>
-      <Text style={styles.subjectName}>{subject.name}</Text>
-      <Text style={styles.subjectDetails}>{subject.code} • {subject.credits} credits</Text>
-    </View>
-    <View style={styles.gradeButtonsContainer}>
-      {gradeOptions.map((grade) => (
-        <TouchableOpacity
-          key={grade}
-          style={[
-            styles.gradeButton,
-            selectedGrade === grade && styles.gradeButtonSelected
-          ]}
-          onPress={() => onGradeChange(grade)}>
-          <Text style={[
-            styles.gradeButtonText,
-            selectedGrade === grade && styles.gradeButtonTextSelected
-          ]}>
-            {grade}
-          </Text>
-        </TouchableOpacity>
-      ))}
-    </View>
-  </View>
-);
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 // Main Combined Component
-export default function CombinedCGPATracker() {
+export default function CombinedCGPATracker({ navigation }) {
   // Navigation state
   const [currentScreen, setCurrentScreen] = useState('input');
   const [subjects, setSubjects] = useState([]);
@@ -67,17 +37,35 @@ export default function CombinedCGPATracker() {
   });
   // Grade management state
   const [grades, setGrades] = useState({});
-  // Fixed: Moved isSaved to top level to fix hooks error
-  const [isSaved, setIsSaved] = useState(false);
-  // Grade points mapping
+  const [currentUser, setCurrentUser] = useState(null);
+  const [currentSemester, setCurrentSemester] = useState('Custom');
+  const [currentDepartment, setCurrentDepartment] = useState('Custom');
+
+  // Use same grade scale & UI as CGPA Calculator (S, A, B, C, D, E, F)
   const gradePoints = {
-    'S': 10,
-    'A': 9,
-    'B': 8,
-    'C': 7,
-    'D': 6,
-    'E': 5,
-    'F': 0,
+    S: 10,
+    A: 9,
+    B: 8,
+    C: 7,
+    D: 6,
+    E: 5,
+    F: 0,
+  };
+
+  useEffect(() => {
+    loadCurrentUser();
+  }, []);
+
+  const loadCurrentUser = async () => {
+    try {
+      const user = await UserService.getCurrentUser();
+      setCurrentUser(user);
+      if (user?.department) {
+        setCurrentDepartment(user.department);
+      }
+    } catch (error) {
+      console.error('Error loading current user:', error);
+    }
   };
 
   // Add subject function
@@ -93,7 +81,7 @@ export default function CombinedCGPATracker() {
     const newSubject = {
       id: Date.now().toString(),
       name: currentSubject.name,
-      code: currentSubject.code,
+      code: currentSubject.code || `CUST-${Date.now()}`,
       credits: parseFloat(currentSubject.credits),
     };
     setSubjects([...subjects, newSubject]);
@@ -119,15 +107,21 @@ export default function CombinedCGPATracker() {
 
   // Update grade function
   const updateGrade = (subjectId, grade) => {
-    setGrades({
-      ...grades,
-      [subjectId]: grade,
-    });
+    // find subject to determine key (prefer code for consistency with other screens)
+    const subject = subjects.find(s => s.id === subjectId);
+    const key = subject && subject.code ? subject.code : subjectId;
+    setGrades(prev => ({
+      ...prev,
+      [key]: grade,
+    }));
   };
 
-  // Calculate CGPA function
-  const calculateCGPA = () => {
-    const subjectsWithoutGrades = subjects.filter(subject => !grades[subject.id]);
+  // Calculate CGPA function - save then navigate to shared Result screen
+  const calculateCGPA = async () => {
+    const subjectsWithoutGrades = subjects.filter(subject => {
+      const key = subject.code || subject.id;
+      return !grades[key];
+    });
     if (subjectsWithoutGrades.length > 0) {
       Alert.alert(
         'Missing Grades',
@@ -135,16 +129,31 @@ export default function CombinedCGPATracker() {
       );
       return;
     }
-    setCurrentScreen('results');
-  };
 
-  // Reset all data
-  const resetData = () => {
-    setSubjects([]);
-    setCurrentSubject({ name: '', code: '', credits: '' });
-    setGrades({});
-    setCurrentScreen('input');
-    setIsSaved(false);
+    // Calculate CGPA first
+    const cgpa = calculateCurrentCGPA();
+    
+    // Navigate directly to Result screen without saving first
+    navigation.navigate('Result', {
+      cgpa: parseFloat(cgpa),
+      semester: currentSemester,
+      department: currentDepartment,
+      totalSubjects: subjects.length,
+      isCustom: true,
+        // Pass subjects data for display in Result screen
+        subjects: subjects.map(s => {
+          const key = s.code || s.id;
+          const selectedGrade = grades[key] || null;
+          return {
+            id: s.id || (s.code || '') + '-' + (s.name || '').slice(0,4),
+            code: s.code || '',
+            name: s.name || '',
+            credits: s.credits || 0,
+            grade: selectedGrade,
+            gradePoints: selectedGrade ? (gradePoints[selectedGrade] || 0) : (s.gradePoints || 0)
+          };
+        })
+    });
   };
 
   // Calculate current CGPA for results
@@ -152,8 +161,9 @@ export default function CombinedCGPATracker() {
     let totalPoints = 0;
     let totalCredits = 0;
     subjects.forEach(subject => {
-      const grade = grades[subject.id];
-      const points = gradePoints[grade];
+      const key = subject.code || subject.id;
+      const grade = grades[key];
+      const points = gradePoints[grade] || 0;
       totalPoints += points * subject.credits;
       totalCredits += subject.credits;
     });
@@ -173,10 +183,6 @@ export default function CombinedCGPATracker() {
         title = 'Select Grades';
         subtitle = 'Choose grades for each subject';
         break;
-      case 'results':
-        title = 'CGPA Results';
-        subtitle = 'Your academic performance summary';
-        break;
     }
     return (
       <View style={styles.headerContainer}>
@@ -193,8 +199,15 @@ export default function CombinedCGPATracker() {
 
   // Subject Input Screen Content
   const renderSubjectInput = () => (
-    <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-      <View style={styles.scrollContent}>
+    <KeyboardAvoidingView 
+      style={styles.flex1} 
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
+      <ScrollView 
+        style={styles.scrollView} 
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+      >
         <View style={styles.screenContent}>
           <View style={styles.inputContainer}>
             <Text style={styles.sectionTitle}>Subject Details</Text>
@@ -203,15 +216,14 @@ export default function CombinedCGPATracker() {
               placeholder="Subject Name"
               value={currentSubject.name}
               onChangeText={(text) => setCurrentSubject({ ...currentSubject, name: text })}
-              placeholderTextColor="#555555ff" // Set your preferred color here
+              placeholderTextColor="#666"
             />
-
             <TextInput
               style={styles.input}
               placeholder="Subject Code"
               value={currentSubject.code}
               onChangeText={(text) => setCurrentSubject({ ...currentSubject, code: text })}
-              placeholderTextColor="#555555ff" 
+              placeholderTextColor="#666"
             />
             <TextInput
               style={styles.input}
@@ -219,16 +231,21 @@ export default function CombinedCGPATracker() {
               value={currentSubject.credits}
               onChangeText={(text) => setCurrentSubject({ ...currentSubject, credits: text })}
               keyboardType="numeric"
-              placeholderTextColor="#555555ff" 
+              placeholderTextColor="#666"
             />
-            <TouchableOpacity style={styles.addButton} onPress={addSubject}>
-              <FontAwesome5 name="plus" size={16} color="white" style={{ marginRight: 8 }} />
-              <Text style={styles.addButtonText}>Add Subject</Text>
-            </TouchableOpacity>
+            <PrimaryButton
+              title="Add Subject"
+              iconName="plus"
+              onPress={addSubject}
+              style={styles.addButton}
+              textStyle={styles.addButtonText}
+            />
           </View>
+
           {subjects.length > 0 && (
             <View style={styles.previewContainer}>
-              <Text style={styles.sectionTitle}>Preview ({subjects.length} subjects)</Text>
+              <Text style={styles.sectionTitle}>Added Subjects ({subjects.length})</Text>
+              
               <FlatList
                 data={subjects}
                 keyExtractor={item => item.id}
@@ -240,293 +257,272 @@ export default function CombinedCGPATracker() {
                 )}
                 scrollEnabled={false}
                 showsVerticalScrollIndicator={false}
+                style={styles.previewList}
               />
-              <TouchableOpacity style={styles.proceedButton} onPress={proceedToGrades}>
-                <FontAwesome5 name="arrow-right" size={16} color="white" style={{ marginRight: 8 }} />
-                <Text style={styles.proceedButtonText}>Proceed to Grade Selection</Text>
-              </TouchableOpacity>
+              
+              <PrimaryButton
+                title="Proceed to Grade Selection"
+                iconName="arrow-right"
+                onPress={proceedToGrades}
+                style={styles.proceedButtonLarge}
+                textStyle={styles.proceedButtonText}
+              />
             </View>
           )}
         </View>
-      </View>
-    </ScrollView>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 
   // Grade Selection Screen Content
   const renderGradeSelection = () => (
-    <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-      <View style={styles.scrollContent}>
-        <View style={styles.screenContent}>
-          <View style={styles.subjectsContainer}>
-            {subjects.map((subject) => (
-              <GradeCard
-                key={subject.id}
-                subject={subject}
-                selectedGrade={grades[subject.id]}
-                onGradeChange={(grade) => updateGrade(subject.id, grade)}
-                gradeOptions={Object.keys(gradePoints)}
-              />
-            ))}
-          </View>
-          <TouchableOpacity style={styles.calculateButton} onPress={calculateCGPA}>
-            <FontAwesome5 name="calculator" size={16} color="white" style={{ marginRight: 8 }} />
-            <Text style={styles.calculateButtonText}>Calculate CGPA</Text>
+    <ScrollView 
+      style={styles.scrollView} 
+      showsVerticalScrollIndicator={false}
+      contentContainerStyle={styles.scrollContent}
+    >
+      <View style={styles.screenContent}>
+        <View style={styles.subjectsContainer}>
+          <Text style={styles.sectionTitle}>Select Grades</Text>
+          <Text style={styles.subtitle}>Tap on the grade for each subject</Text>
+          
+          {subjects.map((subject) => (
+            <SubjectCard
+              key={subject.id}
+              subject={subject}
+              selectedGrade={grades[subject.id]}
+              onGradeChange={(grade) => updateGrade(subject.id, grade)}
+            />
+          ))}
+        </View>
+        
+        <View style={styles.calculateContainer}>
+          <PrimaryButton
+            title="Calculate CGPA"
+            iconName="calculator"
+            onPress={calculateCGPA}
+            style={styles.calcBtn}
+            textStyle={styles.calcBtnText}
+          />
+          
+          <TouchableOpacity style={styles.backButton} onPress={() => setCurrentScreen('input')}>
+            <FontAwesome5 name="arrow-left" size={14} color="#232867" style={styles.buttonIcon} />
+            <Text style={styles.backButtonText}>Back to Subjects</Text>
           </TouchableOpacity>
         </View>
       </View>
     </ScrollView>
   );
 
-  // Results Screen Content - Gradient background only
-  const renderResults = () => {
-    const cgpa = calculateCurrentCGPA();
-    const renderFloatingElements = () => (
-      <View style={celebratoryStyles.floatingContainer}>
-        <View style={[celebratoryStyles.floatingElement, { top: '15%', left: '25%' }]}>
-          <FontAwesome5 name="star" size={12} color="#FFD700" />
-        </View>
-        <View style={[celebratoryStyles.floatingElement, { top: '20%', right: '20%' }]}>
-          <FontAwesome5 name="star" size={10} color="#FF69B4" />
-        </View>
-        <View style={[celebratoryStyles.floatingElement, { top: '35%', left: '15%' }]}>
-          <View style={[celebratoryStyles.diamond, { backgroundColor: '#00CED1' }]} />
-        </View>
-        <View style={[celebratoryStyles.floatingElement, { top: '25%', right: '30%' }]}>
-          <View style={[celebratoryStyles.diamond, { backgroundColor: '#FFD700' }]} />
-        </View>
-        <View style={[celebratoryStyles.floatingElement, { top: '30%', left: '35%' }]}>
-          <FontAwesome5 name="star" size={8} color="#00CED1" />
-        </View>
-        <View style={[celebratoryStyles.floatingElement, { top: '40%', right: '25%' }]}>
-          <View style={[celebratoryStyles.diamond, { backgroundColor: '#FF69B4' }]} />
-        </View>
-        <View style={[celebratoryStyles.floatingElement, { top: '65%', left: '20%' }]}>
-          <FontAwesome5 name="star" size={14} color="#FFD700" />
-        </View>
-      </View>
-    );
-
-    return (
-      <LinearGradient
-        colors={['#78c8e7ff', '#d5e8ebff', '#e9f3f7ff']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={celebratoryStyles.gradientContainer}
-      >
-        {renderFloatingElements()}
-        <View style={celebratoryStyles.contentContainer}>
-          {/* Semester Display */}
-          <Text style={celebratoryStyles.semesterText}>
-            Custom Subject CGPA
-          </Text>
-          {/* CGPA Display */}
-          <Text style={celebratoryStyles.cgpaText}>
-            CGPA: {cgpa}
-          </Text>
-          {/* Congratulatory Message */}
-          <View style={celebratoryStyles.messageContainer}>
-            <FontAwesome5 name="trophy" size={22} color="#FFD700" style={celebratoryStyles.trophyIcon} />
-            <Text style={celebratoryStyles.congratsMessage}>
-              Great job! Your hard work is paying off!
-            </Text>
-          </View>
-        </View>
-      </LinearGradient>
-    );
-  };
-
-  // Apply gradient background to all screens
-  if (currentScreen === 'results') {
-    return (
-      <View style={{ flex: 1 }}>
-        <StatusBar backgroundColor="transparent" translucent barStyle="dark-content" />
-        {renderResults()}
-      </View>
-    );
-  }
-
   return (
-    <SafeAreaView style={styles.containerTransparent}>
-      <StatusBar backgroundColor="transparent" translucent barStyle="dark-content" />
+    <SafeAreaView style={styles.root}>
+      <View style={styles.stickyNavBar}>
+        <StatusBar barStyle="dark-content" backgroundColor="#ffffff" translucent={false} />
+        <View style={styles.navContent}>
+          <Text style={styles.navTitle}>Custom CGPA Calculator</Text>
+        </View>
+      </View>
+
       {renderHeader()}
+      
       {currentScreen === 'input' && renderSubjectInput()}
       {currentScreen === 'grades' && renderGradeSelection()}
     </SafeAreaView>
   );
 }
 
-// --- styles objects (styles and celebratoryStyles) remain unchanged from your snippet above ---
+// --- IMPROVED STYLES ---
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#BEDFFA',
+  // Layout
+  root: { 
+    flex: 1, 
+    backgroundColor: '#e9edfa' 
   },
-  containerTransparent: {
+  flex1: {
     flex: 1,
-    backgroundColor: 'transparent',
-    backgroundColor: '#BEDFFA',
   },
-  headerContainer: {
-    marginTop: 30,
+  
+  // Navigation
+  stickyNavBar: {
+    flexDirection: 'row',
     alignItems: 'center',
-    paddingTop: 20,
-    paddingBottom: 20,
+    height: 60,
+    backgroundColor: '#fff',
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#ecedf6',
+    justifyContent: 'space-between',
+  },
+  navContent: { 
+    flex: 1, 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    justifyContent: 'space-between' 
+  },
+  navTitle: { 
+    flex: 1, 
+    fontSize: 18, 
+    fontWeight: 'bold', 
+    color: '#232867', 
+    textAlign: 'center' 
+  },
+
+  // Header
+  headerContainer: {
+    paddingVertical: 24,
+    paddingHorizontal: 20,
+    alignItems: 'center',
     backgroundColor: 'transparent',
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
   },
   logoContainer: {
-    marginBottom: 10,
+    marginBottom: 12,
   },
   logoCircle: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
     backgroundColor: '#fff',
     alignItems: 'center',
     justifyContent: 'center',
-    elevation: 3,
+    elevation: 4,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 3,
+    shadowRadius: 4,
   },
   headerTitle: {
     fontSize: 24,
     fontWeight: 'bold',
     color: '#232867',
-    marginBottom: 5,
+    marginBottom: 6,
+    textAlign: 'center',
   },
   headerSubtitle: {
     fontSize: 16,
     color: '#3a4285',
     textAlign: 'center',
     paddingHorizontal: 20,
+    lineHeight: 20,
   },
-  navigationButtons: {
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-  },
-  backButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'white',
-    paddingHorizontal: 15,
-    paddingVertical: 10,
-    borderRadius: 20,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    alignSelf: 'flex-start',
-  },
-  backButtonText: {
-    marginLeft: 8,
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#232867',
-  },
+
+  // Scroll & Content
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: 20,
+    flexGrow: 1,
+    paddingBottom: 30,
   },
   screenContent: {
     paddingHorizontal: 20,
+    paddingBottom: 20,
+  },
+
+  // Input Section
+  inputContainer: {
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    padding: 24,
+    marginBottom: 20,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
   },
   sectionTitle: {
     fontSize: 20,
     fontWeight: '600',
-    marginBottom: 15,
+    marginBottom: 16,
     color: '#232867',
   },
-  inputContainer: {
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
-    borderRadius: 15,
-    padding: 20,
+  subtitle: {
+    fontSize: 14,
+    color: '#666',
     marginBottom: 20,
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    textAlign: 'center',
   },
   input: {
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: '#e1e1e1',
     borderRadius: 12,
-    padding: 15,
+    padding: 16,
     fontSize: 16,
-    marginBottom: 15,
-    backgroundColor: '#f9f9f9',
+    marginBottom: 16,
+    backgroundColor: '#fafafa',
+    color: '#333',
   },
   addButton: {
     backgroundColor: '#232867',
     borderRadius: 12,
-    padding: 15,
+    padding: 16,
     alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'center',
+    marginTop: 8,
   },
   addButtonText: {
     color: 'white',
     fontSize: 16,
     fontWeight: '600',
   },
+
+  // Preview Section
   previewContainer: {
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
-    borderRadius: 15,
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
     padding: 20,
-    elevation: 3,
+    elevation: 4,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowRadius: 6,
+  },
+  previewList: {
+    marginBottom: 16,
   },
   previewCard: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#f8f9fa',
     borderRadius: 12,
-    padding: 15,
+    padding: 16,
     marginBottom: 10,
     borderLeftWidth: 4,
     borderLeftColor: '#007AFF',
   },
   previewContent: {
     flex: 1,
+    marginRight: 12,
   },
   previewName: {
     fontSize: 16,
     fontWeight: '600',
     color: '#333',
-    marginBottom: 3,
+    marginBottom: 4,
   },
   previewDetails: {
     fontSize: 14,
     color: '#666',
   },
   removeButton: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     backgroundColor: '#DC3545',
     alignItems: 'center',
     justifyContent: 'center',
   },
   removeButtonText: {
     color: 'white',
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: 'bold',
   },
-  proceedButton: {
+  proceedButtonLarge: {
     backgroundColor: '#28A745',
     borderRadius: 12,
-    padding: 15,
+    padding: 16,
     alignItems: 'center',
-    marginTop: 15,
     flexDirection: 'row',
     justifyContent: 'center',
   },
@@ -535,186 +531,50 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
+
+  // Grade Selection
   subjectsContainer: {
-    marginBottom: 30,
-  },
-  gradeCard: {
-    backgroundColor: 'rgba(35, 40, 103, 0.95)',
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 16,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  subjectInfo: {
-    marginBottom: 16,
-  },
-  subjectName: {
-    fontSize: 21,
-    fontWeight: '800',
-    color: 'white',
-    marginBottom: 4,
-  },
-  subjectDetails: {
-    fontSize: 15,
-    color: '#BEDFFA',
-  },
-  gradeButtonsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    justifyContent: 'flex-start',
-  },
-  gradeButton: {
-    width: 35,
-    height: 35,
-    borderRadius: 25,
-    backgroundColor: '#f0f0f0',
-    borderWidth: 1,
-    borderColor: '#ddd',
-    alignItems: 'center',
-    justifyContent: 'center',
-    margin: 1,
-  },
-  gradeButtonSelected: {
-    backgroundColor: '#232867',
-    borderRadius: 25,
-    borderColor: 'cyan',
-    borderWidth: 2,
-  },
-  gradeButtonText: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#232867',
-  },
-  gradeButtonTextSelected: {
-    color: 'white',
-    fontWeight: '700',
-  },
-  calculateButton: {
-    backgroundColor: 'rgba(35, 40, 103, 0.95)',
-    borderRadius: 15,
-    padding: 18,
-    alignItems: 'center',
-    marginBottom: 30,
-    flexDirection: 'row',
-    justifyContent: 'center',
-  },
-  calculateButtonText: {
-    color: 'white',
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-});
-
-
-// Fixed Celebratory Styles - Gradient only
-const celebratoryStyles = StyleSheet.create({
-  gradientContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-  },
-  floatingContainer: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-  },
-  floatingElement: {
-    position: 'absolute',
-    zIndex: 1,
-  },
-  diamond: {
-    width: 10,
-    height: 10,
-    transform: [{ rotate: '45deg' }],
-  },
-  jellyfishContainer: {
-    position: 'absolute',
-    top: '45%',
-    left: 0,
-    right: 0,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingHorizontal: 60,
-    zIndex: 2,
-  },
-  jellyfish: {
-    alignItems: 'center',
-  },
-  leftJellyfish: {
-    marginLeft: -20,
-  },
-  rightJellyfish: {
-    marginRight: -20,
-  },
-  jellyfishHead: {
-    width: 50,
-    height: 25,
-    borderTopLeftRadius: 25,
-    borderTopRightRadius: 25,
-    borderBottomLeftRadius: 15,
-    borderBottomRightRadius: 15,
-  },
-  jellyfishTentacles: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    width: 50,
-    marginTop: -5,
-  },
-  tentacle: {
-    width: 4,
-    borderRadius: 2,
-    marginHorizontal: 2,
-  },
-  contentContainer: {
-    alignItems: 'center',
-    zIndex: 10,
-  },
-  semesterText: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#232867',
     marginBottom: 20,
-    letterSpacing: 1,
   },
-  cgpaText: {
-    fontSize: 36,
-    fontWeight: 'bold',
-    color: '#232867',
-    marginBottom: 40,
-    letterSpacing: 1,
+  calculateContainer: {
+    alignItems: 'center',
+    gap: 16,
   },
-  messageContainer: {
+  calcBtn: {
+    backgroundColor: '#232867',
+    paddingVertical: 18,
+    paddingHorizontal: 24,
+    borderRadius: 16,
+    width: '100%',
+    maxWidth: 300,
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    elevation: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+  },
+  calcBtnText: { 
+    color: '#fff', 
+    fontSize: 18, 
+    fontWeight: 'bold', 
+    letterSpacing: 0.5,
+  },
+  backButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-    borderRadius: 25,
-    marginBottom: 40,
-    marginTop: 80,
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    maxWidth: '90%',
+    padding: 12,
   },
-  trophyIcon: {
-    marginRight: 10,
-  },
-  congratsMessage: {
-    fontSize: 16,
+  backButtonText: {
+    color: '#232867',
+    fontSize: 14,
     fontWeight: '600',
-    color: '#333',
-    textAlign: 'center',
-    flex: 1,
+  },
+
+  // Common
+  buttonIcon: {
+    marginRight: 8,
   },
 });

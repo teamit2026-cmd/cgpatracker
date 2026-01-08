@@ -1,3 +1,4 @@
+// fo.js - FIXED IMPORTS
 import React, { useState, useRef, useCallback } from 'react';
 import {
   View,
@@ -14,8 +15,11 @@ import {
 import Svg, { Path, Defs, LinearGradient, Stop } from 'react-native-svg';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
+
+// CORRECT PATHS
+import ResultService from './database/services/ResultService';
+import UserService from './database/services/UserService';
 
 const screenWidth = Dimensions.get('window').width;
 
@@ -41,36 +45,59 @@ const CGPAProgressChart = () => {
   const [cgpaData, setCgpaData] = useState([]);
   const [overallCGPA, setOverallCGPA] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [currentUser, setCurrentUser] = useState(null);
   const fadeAnimation = useRef(new Animated.Value(0)).current;
   const timeoutRef = useRef(null);
 
-  // Load CGPA data from AsyncStorage
+  // Load CGPA data from Realm via ResultService
   useFocusEffect(
     useCallback(() => {
-      loadCGPAData();
+      loadCurrentUserAndData();
     }, [])
   );
 
-  const loadCGPAData = async () => {
+  const loadCurrentUserAndData = async () => {
     try {
       setLoading(true);
-      const data = await AsyncStorage.getItem('cgpaHistory');
       
-      if (data) {
-        const history = JSON.parse(data);
-        
+      // Load current user first
+      const user = await UserService.getCurrentUser();
+      setCurrentUser(user);
+      
+      if (user) {
+        await loadCGPAData(user.id);
+      } else {
+        // No user found - show empty data
+        showEmptyData();
+      }
+    } catch (error) {
+      console.log('Error loading user or CGPA data:', error);
+      showEmptyData();
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadCGPAData = async (userId) => {
+    try {
+      // Use ResultService to get results for chart (non-custom results only)
+      const results = await ResultService.getResultsForChart(userId);
+      const resultsArray = Array.from(results);
+      
+      if (resultsArray.length > 0) {
         // Create array for 8 semesters with 0 for uncalculated ones
         const semesterData = Array.from({ length: 8 }, (_, index) => {
           const semesterNum = index + 1;
-          // Find CGPA for this semester (excluding custom entries)
-          const semesterRecord = history.find(
-            record => !record.isCustom && record.semester === semesterNum
+          // Find CGPA for this semester
+          const semesterRecord = resultsArray.find(
+            record => record.semester === semesterNum.toString() || record.semester === `Sem ${semesterNum}`
           );
           
           return {
             semester: `Sem ${semesterNum}`,
-            cgpa: semesterRecord ? semesterRecord.value : 0,
+            cgpa: semesterRecord ? parseFloat(semesterRecord.value) : 0,
             hasData: !!semesterRecord,
+            record: semesterRecord || null
           };
         });
         
@@ -87,27 +114,23 @@ const CGPAProgressChart = () => {
         }
       } else {
         // No data - show all semesters with 0 CGPA
-        const emptySemesterData = Array.from({ length: 8 }, (_, index) => ({
-          semester: `Sem ${index + 1}`,
-          cgpa: 0,
-          hasData: false,
-        }));
-        setCgpaData(emptySemesterData);
-        setOverallCGPA(0);
+        showEmptyData();
       }
     } catch (error) {
-      console.log('Error loading CGPA data:', error);
-      // Show empty data on error
-      const emptySemesterData = Array.from({ length: 8 }, (_, index) => ({
-        semester: `Sem ${index + 1}`,
-        cgpa: 0,
-        hasData: false,
-      }));
-      setCgpaData(emptySemesterData);
-      setOverallCGPA(0);
-    } finally {
-      setLoading(false);
+      console.log('Error loading CGPA data from Realm:', error);
+      showEmptyData();
     }
+  };
+
+  const showEmptyData = () => {
+    const emptySemesterData = Array.from({ length: 8 }, (_, index) => ({
+      semester: `Sem ${index + 1}`,
+      cgpa: 0,
+      hasData: false,
+      record: null
+    }));
+    setCgpaData(emptySemesterData);
+    setOverallCGPA(0);
   };
 
   const pointSpacing = CHART_WIDTH / (cgpaData.length - 1);
@@ -240,6 +263,11 @@ const CGPAProgressChart = () => {
                   <Ionicons name="analytics-outline" size={48} color={COLORS.primaryLight} />
                   <Text style={styles.noDataText}>No CGPA data available yet</Text>
                   <Text style={styles.noDataSubtext}>Calculate your CGPA to see the progress chart</Text>
+                  {!currentUser && (
+                    <Text style={styles.noDataHint}>
+                      Make sure you have set up your profile first
+                    </Text>
+                  )}
                 </View>
               )}
 
@@ -339,6 +367,9 @@ const CGPAProgressChart = () => {
                               <View style={styles.tooltip}>
                                 <Text style={styles.tooltipSemester}>{data.semester}</Text>
                                 <Text style={styles.tooltipCGPA}>CGPA: {data.cgpa.toFixed(2)}</Text>
+                                {data.record?.department && (
+                                  <Text style={styles.tooltipDept}>{data.record.department}</Text>
+                                )}
                               </View>
                             </Animated.View>
                           )}
@@ -391,6 +422,16 @@ const CGPAProgressChart = () => {
                 <Text style={styles.statLabel}>Current</Text>
               </View>
             </View>
+
+            {/* Data Source Info */}
+            {semestersWithData.length > 0 && (
+              <View style={styles.infoCard}>
+                <Ionicons name="information-circle-outline" size={16} color={COLORS.primaryLight} />
+                <Text style={styles.infoText}>
+                  Data loaded from your saved CGPA results
+                </Text>
+              </View>
+            )}
           </View>
         </ScrollView>
       </TouchableWithoutFeedback>
@@ -398,8 +439,288 @@ const CGPAProgressChart = () => {
   );
 };
 
+// ... (keep all the same styles, just add the new ones below)
+
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
+    backgroundColor: COLORS.lightBlue,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: COLORS.primaryDark,
+    fontWeight: '500',
+  },
+  scrollContainer: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingVertical: 10,
+  },
+  centeredContent: {
+    paddingHorizontal: 20,
+  },
+  chartCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 20,
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+  },
+  chartHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 30,
+    paddingBottom: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.lightBlue,
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: COLORS.primaryDark,
+    marginLeft: 8,
+  },
+  noDataContainer: {
+    alignItems: 'center',
+    paddingVertical: 60,
+  },
+  noDataText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: COLORS.primaryDark,
+    marginTop: 16,
+  },
+  noDataSubtext: {
+    fontSize: 14,
+    color: COLORS.primaryLight,
+    marginTop: 8,
+    textAlign: 'center',
+  },
+  noDataHint: {
+    fontSize: 12,
+    color: COLORS.accent,
+    marginTop: 12,
+    fontStyle: 'italic',
+  },
+  chartArea: {
+    height: 260,
+    flexDirection: 'row',
+    position: 'relative',
+  },
+  yAxisContainer: {
+    width: 40,
+    height: CHART_HEIGHT,
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+    paddingRight: 8,
+    marginTop: 20,
+  },
+  yAxisLabel: {
+    fontSize: 12,
+    color: COLORS.primaryLight,
+    fontWeight: '500',
+    textAlign: 'right',
+  },
+  chartContainer: {
+    flex: 1,
+    height: CHART_HEIGHT,
+    marginLeft: 12,
+    marginTop: 20,
+    marginRight: 10,
+    position: 'relative',
+  },
+  gridLine: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    height: 1,
+    backgroundColor: COLORS.lightBlue,
+  },
+  svgChart: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+  },
+  pointWrapper: {
+    position: 'absolute',
+    zIndex: 10,
+  },
+  dataPointContainer: {
+    position: 'absolute',
+    width: 16,
+    height: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dataPoint: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: COLORS.primary,
+    borderWidth: 2,
+    borderColor: '#ffffff',
+    elevation: 3,
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.3,
+    shadowRadius: 2,
+  },
+  noDataPoint: {
+    backgroundColor: COLORS.lightBlueHover,
+    borderColor: COLORS.lightBlue,
+    opacity: 0.5,
+  },
+  selectedDataPoint: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: COLORS.primaryDark,
+    borderWidth: 3,
+    borderColor: '#ffffff',
+    elevation: 5,
+  },
+  tooltipContainer: {
+    position: 'absolute',
+    alignItems: 'center',
+    zIndex: 1000,
+  },
+  tooltip: {
+    backgroundColor: COLORS.primaryDark,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    alignItems: 'center',
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+  },
+  tooltipSemester: {
+    fontSize: 11,
+    color: COLORS.secondary,
+    fontWeight: '500',
+    marginBottom: 2,
+  },
+  tooltipCGPA: {
+    fontSize: 13,
+    color: '#ffffff',
+    fontWeight: 'bold',
+    marginBottom: 2,
+  },
+  tooltipDept: {
+    fontSize: 10,
+    color: COLORS.secondary,
+    fontStyle: 'italic',
+  },
+  xAxisContainer: {
+    position: 'absolute',
+    bottom: 5,
+    left: 52,
+    right: 10,
+    height: 25,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  xAxisLabel: {
+    fontSize: 11,
+    color: COLORS.primaryLight,
+    fontWeight: '500',
+    textAlign: 'center',
+    flex: 1,
+    includeFontPadding: false,
+    paddingVertical: 0,
+    marginVertical: 0,
+  },
+  xAxisLabelNoData: {
+    opacity: 0.4,
+  },
+  averageCGPACard: {
+    backgroundColor: COLORS.primary,
+    borderRadius: 16,
+    padding: 24,
+    alignItems: 'center',
+    marginBottom: 16,
+    elevation: 4,
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+  },
+  averageCGPALabel: {
+    fontSize: 18,
+    color: '#ffffff',
+    fontWeight: '500',
+    marginBottom: 8,
+  },
+  averageCGPAValue: {
+    fontSize: 48,
+    color: '#ffffff',
+    fontWeight: 'bold',
+  },
+  averageCGPASubtext: {
+    fontSize: 14,
+    color: COLORS.secondary,
+    marginTop: 8,
+    fontWeight: '500',
+  },
+  statsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    backgroundColor: '#ffffff',
+    paddingVertical: 24,
+    paddingHorizontal: 16,
+    borderRadius: 16,
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    marginBottom: 20,
+  },
+  statItem: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  statValue: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: COLORS.primaryDark,
+    marginBottom: 4,
+  },
+  statLabel: {
+    fontSize: 14,
+    color: COLORS.primaryLight,
+    fontWeight: '500',
+  },
+  infoCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#f8f9fa',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 30,
+  },
+  infoText: {
+    fontSize: 12,
+    color: COLORS.primaryLight,
+    marginLeft: 8,
+    fontStyle: 'italic',
+  },
+    container: {
     flex: 1,
     backgroundColor: COLORS.lightBlue,
   },
