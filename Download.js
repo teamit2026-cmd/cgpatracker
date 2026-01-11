@@ -153,7 +153,7 @@ const Download = () => {
               if (!currentUser) return;
               const success = await ResultService.deleteAllResults(currentUser.id);
               if (success) {
-                Alert.alert('Success', 'All results have been deleted.');
+                // Success alert removed as requested
                 loadResults();
               } else {
                 Alert.alert('Info', 'No results to delete.');
@@ -172,8 +172,8 @@ const Download = () => {
 
   const exportToPDF = async () => {
     try {
-      if (results.length === 0) {
-        Alert.alert('No Results', 'You have no saved results to export.');
+      if (currentTabResults.length === 0) {
+        Alert.alert('No Results', 'You have no results in this category to export.');
         return;
       }
 
@@ -244,7 +244,7 @@ const Download = () => {
               <th>Best CGPA</th>
             </tr>
             <tr>
-              <td>${results.length}</td>
+              <td>${currentTabResults.length}</td>
               <td>${stats.averageCGPA}</td>
               <td>${stats.bestCGPA}</td>
             </tr>
@@ -252,7 +252,7 @@ const Download = () => {
           
           <h3>Detailed Semester Records</h3>
           
-          ${results.map(result => `
+          ${currentTabResults.map(result => `
             <div class="semester-section">
               <div class="semester-header">
                 <span class="semester-title">Semester ${result.semester}</span>
@@ -437,7 +437,7 @@ const Download = () => {
             disabled={isExporting}
           >
             <Text style={styles.exportButtonText}>
-              {isExporting ? '⏳ Generating PDF...' : '📄 Export All as PDF'}
+              {isExporting ? '⏳ Generating PDF...' : `📄 Export ${tabs[currentTab]?.name} to PDF`}
             </Text>
           </TouchableOpacity>
         )}

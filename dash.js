@@ -14,12 +14,62 @@ import {
   Platform,
   BackHandler,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons, MaterialIcons, Entypo } from '@expo/vector-icons';
 import Constants from 'expo-constants';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 
 const { width, height } = Dimensions.get('window');
+const CARD_WIDTH = width * 0.55;
+
+const DEVELOPER_MESSAGES = [
+  {
+    name: 'Loguesvaran',
+    role: 'Tech Innovator',
+    message: 'Dedicated to providing the best tracking experience for PKIETians.',
+    color: '#FF6B35', // Orange
+    gradient: ['#FF6B35', '#FF8C42'],
+    avatar: '👨‍💻',
+    rating: 5,
+  },
+  {
+    name: 'Dhanush',
+    role: 'Lead Architect',
+    message: 'Focusing on clean code and accurate calculations for every department.',
+    color: '#00B4D8', // Cyan
+    gradient: ['#00B4D8', '#0096C7'],
+    avatar: '🚀',
+    rating: 5,
+  },
+  {
+    name: 'Keerthikeshan',
+    role: 'Backend Architect',
+    message: 'We aim to make academic progress tracking seamless and efficient.',
+    color: '#FFD166', // Yellow
+    gradient: ['#FFD166', '#FFC233'],
+    avatar: '🎨',
+    rating: 5,
+  },
+  {
+    name: 'Krishnarajan',
+    role: 'UI/UX Designer',
+    message: 'Innovation in education through technology is our core mission.',
+    color: '#06D6A0', // Green
+    gradient: ['#06D6A0', '#05B48C'],
+    avatar: '💡',
+    rating: 5,
+  },
+  {
+    name: 'Barath',
+    role: 'Logic Specialist',
+    message: 'Helping students stay ahead with real-time GCPA insights.',
+    color: '#EF476F', // Pink
+    gradient: ['#EF476F', '#F25C7C'],
+    avatar: '📊',
+    rating: 5,
+  },
+];
 
 // Get proper status bar height for different platforms
 const getStatusBarHeight = () => {
@@ -32,6 +82,11 @@ const getStatusBarHeight = () => {
 const Dashboard = ({ navigation }) => {
   const [menuVisible, setMenuVisible] = useState(false);
   const [profileVisible, setProfileVisible] = useState(false);
+  const [activeCardIndex, setActiveCardIndex] = useState(0);
+  const scrollX = useRef(new Animated.Value(0)).current;
+  const cardAnimations = useRef(
+    DEVELOPER_MESSAGES.map(() => new Animated.Value(0))
+  ).current;
 
   // StatusBar setup (global)
   useEffect(() => {
@@ -192,10 +247,7 @@ const Dashboard = ({ navigation }) => {
         <WelcomeSection userName="Robert" />
 
         {/* Dashboard Cards */}
-        <ScrollView
-          contentContainerStyle={styles.content}
-          showsVerticalScrollIndicator={false}
-        >
+        <View style={styles.content}>
           <View style={styles.row}>
             <TouchableOpacity
               style={styles.card}
@@ -228,7 +280,145 @@ const Dashboard = ({ navigation }) => {
               <Text style={styles.cardTitle}>Export as PDF</Text>
             </TouchableOpacity>
           </View>
-        </ScrollView>
+
+          {/* Messages and Reviews Section */}
+          <View style={styles.reviewSection}>
+            <View style={styles.sectionHeader}>
+              <View>
+                <Text style={styles.sectionLabel}>Developer's Messages & Reviews</Text>
+                {/* <Text style={styles.sectionSubtitle}>From our development team</Text> */}
+              </View>
+              <View style={styles.cardIndicatorContainer}>
+                {DEVELOPER_MESSAGES.map((_, index) => (
+                  <View
+                    key={index}
+                    style={[
+                      styles.cardIndicator,
+                      activeCardIndex === index && styles.cardIndicatorActive,
+                    ]}
+                  />
+                ))}
+              </View>
+            </View>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              showsVerticalScrollIndicator={false}
+              alwaysBounceVertical={false}
+              contentContainerStyle={styles.reviewList}
+              onScroll={Animated.event(
+                [{ nativeEvent: { contentOffset: { x: scrollX } } }],
+                {
+                  useNativeDriver: false,
+                  listener: (event) => {
+                    const offsetX = event.nativeEvent.contentOffset.x;
+                    const index = Math.round(offsetX / (CARD_WIDTH + 16));
+                    setActiveCardIndex(index);
+                  },
+                }
+              )}
+              scrollEventThrottle={16}
+            >
+              {DEVELOPER_MESSAGES.map((msg, index) => {
+                const inputRange = [
+                  (index - 1) * CARD_WIDTH,
+                  index * CARD_WIDTH,
+                  (index + 1) * CARD_WIDTH,
+                ];
+
+                const scale = scrollX.interpolate({
+                  inputRange,
+                  outputRange: [0.9, 1, 0.9],
+                  extrapolate: 'clamp',
+                });
+
+                const opacity = scrollX.interpolate({
+                  inputRange,
+                  outputRange: [0.6, 1, 0.6],
+                  extrapolate: 'clamp',
+                });
+
+                return (
+                  <TouchableOpacity
+                    key={index}
+                    activeOpacity={0.95}
+                    onPressIn={() => {
+                      Animated.spring(cardAnimations[index], {
+                        toValue: 1,
+                        useNativeDriver: true,
+                        friction: 3,
+                      }).start();
+                    }}
+                    onPressOut={() => {
+                      Animated.spring(cardAnimations[index], {
+                        toValue: 0,
+                        useNativeDriver: true,
+                        friction: 3,
+                      }).start();
+                    }}
+                  >
+                    <Animated.View
+                      style={[
+                        styles.reviewCard,
+                        {
+                          transform: [
+                            { scale },
+                            {
+                              scale: cardAnimations[index].interpolate({
+                                inputRange: [0, 1],
+                                outputRange: [1, 0.97],
+                              }),
+                            },
+                          ],
+                          opacity,
+                        },
+                      ]}
+                    >
+                      <LinearGradient
+                        colors={[...msg.gradient, msg.gradient[0]]}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                        style={styles.gradientBackground}
+                      >
+                        {/* Decorative Elements */}
+                        <View style={styles.decorativeCircle1} />
+                        <View style={styles.decorativeCircle2} />
+
+                        {/* Avatar Badge */}
+                        <View style={styles.avatarContainer}>
+                          <View style={[styles.avatarBadge, { borderColor: msg.color }]}>
+                            <Text style={styles.avatarEmoji}>{msg.avatar}</Text>
+                          </View>
+                          <View style={styles.avatarInfo}>
+                            <Text style={styles.developerName}>{msg.name}</Text>
+                            <Text style={styles.developerRole}>{msg.role}</Text>
+                          </View>
+                        </View>
+
+                        {/* Message Content */}
+                        <View style={styles.messageContainer}>
+                          <MaterialIcons
+                            name="format-quote"
+                            size={28}
+                            color="rgba(255, 255, 255, 0.3)"
+                            style={styles.quoteIconTop}
+                          />
+                          <Text style={styles.reviewText}>{msg.message}</Text>
+                          <MaterialIcons
+                            name="format-quote"
+                            size={28}
+                            color="rgba(255, 255, 255, 0.3)"
+                            style={styles.quoteIconBottom}
+                          />
+                        </View>
+                      </LinearGradient>
+                    </Animated.View>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          </View>
+        </View>
       </View>
 
       {/* Menu Modal */}
@@ -449,20 +639,20 @@ const styles = StyleSheet.create({
 
   content: {
     paddingHorizontal: 20,
-    paddingBottom: 30,
+    paddingBottom: 10,
     paddingTop: 10,
   },
 
   row: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 25,
+    marginBottom: 20,
   },
 
   card: {
     backgroundColor: '#232867',
     borderRadius: 16,
-    paddingVertical: 40,
+    paddingVertical: 35,
     paddingHorizontal: 18,
     width: '47%',
     alignItems: 'center',
@@ -470,7 +660,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.15,
     shadowRadius: 8,
     elevation: 6,
-    minHeight: 140,
+    minHeight: 130,
     justifyContent: 'center',
   },
 
@@ -481,5 +671,157 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 12,
     lineHeight: 20,
+  },
+
+  // Review Section Styles
+  reviewSection: {
+    marginTop: 0,
+    marginBottom: 0,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
+    paddingLeft: 4,
+  },
+  sectionLabel: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#232867',
+  },
+  sectionSubtitle: {
+    fontSize: 10,
+    fontWeight: '500',
+    color: '#64b5f6',
+    marginTop: 1,
+  },
+  cardIndicatorContainer: {
+    flexDirection: 'row',
+    gap: 6,
+  },
+  cardIndicator: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#e2e8f0',
+  },
+  cardIndicatorActive: {
+    backgroundColor: '#64b5f6',
+    width: 24,
+  },
+  reviewList: {
+    paddingRight: 20,
+    paddingTop: 0,
+    paddingBottom: 2,
+  },
+  reviewCard: {
+    width: CARD_WIDTH,
+    marginRight: 16,
+    borderRadius: 28,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.2,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  gradientBackground: {
+    padding: 12,
+    minHeight: 140,
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  decorativeCircle1: {
+    position: 'absolute',
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    top: -30,
+    right: -30,
+  },
+  decorativeCircle2: {
+    position: 'absolute',
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    bottom: -15,
+    left: -15,
+  },
+  avatarContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6,
+    zIndex: 2,
+  },
+  avatarBadge: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  avatarEmoji: {
+    fontSize: 18,
+  },
+  avatarInfo: {
+    marginLeft: 8,
+    flex: 1,
+  },
+  developerName: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#fff',
+    textShadowColor: 'rgba(0, 0, 0, 0.2)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
+  },
+  developerRole: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: 'rgba(255, 255, 255, 0.85)',
+    marginTop: 1,
+  },
+  messageContainer: {
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    borderRadius: 10,
+    padding: 10,
+    marginBottom: 0,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.25)',
+    zIndex: 2,
+  },
+  quoteIconTop: {
+    position: 'absolute',
+    top: 4,
+    left: 4,
+  },
+  quoteIconBottom: {
+    position: 'absolute',
+    bottom: 4,
+    right: 4,
+    transform: [{ rotate: '180deg' }],
+  },
+  reviewText: {
+    color: '#fff',
+    fontSize: 12,
+    lineHeight: 18,
+    textAlign: 'center',
+    fontWeight: '600',
+    fontStyle: 'italic',
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    textShadowColor: 'rgba(0, 0, 0, 0.15)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
 });
