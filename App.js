@@ -26,24 +26,24 @@ const Stack = createStackNavigator();
 
 // Database Loading Component
 const DatabaseLoader = () => (
-  <View style={{ 
-    flex: 1, 
-    justifyContent: 'center', 
+  <View style={{
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#1a1a2e'
   }}>
     <ActivityIndicator size="large" color="#64b5f6" />
-    <Text style={{ 
-      marginTop: 20, 
-      color: '#ffffff', 
+    <Text style={{
+      marginTop: 20,
+      color: '#ffffff',
       fontSize: 16,
       fontWeight: '600'
     }}>
       Initializing Database...
     </Text>
-    <Text style={{ 
-      marginTop: 10, 
-      color: '#b3e5fc', 
+    <Text style={{
+      marginTop: 10,
+      color: '#b3e5fc',
       fontSize: 14,
       textAlign: 'center',
       paddingHorizontal: 40
@@ -55,15 +55,15 @@ const DatabaseLoader = () => (
 
 // Database Error Component
 const DatabaseError = ({ error }) => (
-  <View style={{ 
-    flex: 1, 
-    justifyContent: 'center', 
+  <View style={{
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#1a1a2e',
     padding: 20
   }}>
-    <Text style={{ 
-      color: '#ff6b6b', 
+    <Text style={{
+      color: '#ff6b6b',
       fontSize: 18,
       fontWeight: '700',
       marginBottom: 10,
@@ -71,16 +71,16 @@ const DatabaseError = ({ error }) => (
     }}>
       Database Error
     </Text>
-    <Text style={{ 
-      color: '#b3e5fc', 
+    <Text style={{
+      color: '#b3e5fc',
       fontSize: 14,
       textAlign: 'center',
       marginBottom: 20
     }}>
       {error || 'Failed to initialize database'}
     </Text>
-    <Text style={{ 
-      color: '#87ceeb', 
+    <Text style={{
+      color: '#87ceeb',
       fontSize: 12,
       textAlign: 'center'
     }}>
@@ -101,13 +101,13 @@ function App() {
         console.log('🔄 Initializing Realm Database...');
         await RealmDB.getInstance().initialize();
         console.log('✅ Realm Database initialized successfully');
-        
+
         setDatabaseState({ isReady: true, error: null });
       } catch (error) {
         console.error('❌ Failed to initialize database:', error);
-        setDatabaseState({ 
-          isReady: false, 
-          error: error.message || 'Unknown database error' 
+        setDatabaseState({
+          isReady: false,
+          error: error.message || 'Unknown database error'
         });
       }
     };
@@ -137,7 +137,7 @@ function App() {
   return (
     <NavigationContainer>
       <Stack.Navigator
-        initialRouteName="Dashboard"  // Changed from "Splash" to "Dashboard"
+        initialRouteName="Dashboard"
         screenOptions={{
           headerShown: false,
           cardStyle: { backgroundColor: '#ffffff' },
@@ -145,85 +145,85 @@ function App() {
         }}
       >
         {/* Dashboard - First screen user sees (bypassing auth for now) */}
-        <Stack.Screen 
-          name="Dashboard" 
+        <Stack.Screen
+          name="Dashboard"
           component={Dashboard}
           options={{
             gestureEnabled: false,
           }}
         />
-        
+
         {/* Splash Screen - Still available but not initial */}
-        <Stack.Screen 
-          name="Splash" 
+        <Stack.Screen
+          name="Splash"
           component={SplashScreen}
           options={{
             animationTypeForReplace: 'pop',
           }}
         />
-        
+
         {/* Authentication Flow - Available but not initial */}
-        <Stack.Screen 
-          name="Auth" 
+        <Stack.Screen
+          name="Auth"
           component={AuthScreen}
         />
-        
-        <Stack.Screen 
-          name="OtpScreen" 
+
+        <Stack.Screen
+          name="OtpScreen"
           component={OtpScreen}
         />
-        
+
         {/* Academic Features */}
-        <Stack.Screen 
-          name="CGPACalculator" 
+        <Stack.Screen
+          name="CGPACalculator"
           component={CGPACalculator}
         />
-        
-        <Stack.Screen 
-          name="CustomSubject" 
+
+        <Stack.Screen
+          name="CustomSubject"
           component={CustomSubject}
         />
-        
-        <Stack.Screen 
-          name="Result" 
+
+        <Stack.Screen
+          name="Result"
           component={Result}
         />
-        
-        <Stack.Screen 
-          name="CGPAProgressAnalysis" 
+
+        <Stack.Screen
+          name="CGPAProgressAnalysis"
           component={CGPAProgressAnalysis}
         />
-        
+
         {/* User Profile & Settings */}
-        <Stack.Screen 
-          name="ViewProfile" 
+        <Stack.Screen
+          name="ViewProfile"
           component={ViewProfile}
         />
-        
-        <Stack.Screen 
-          name="ChangePassword" 
+
+        <Stack.Screen
+          name="ChangePassword"
           component={ChangePassword}
         />
-        
+
         {/* Utility Screens */}
-        <Stack.Screen 
-          name="Download" 
+        <Stack.Screen
+          name="Download"
           component={Download}
         />
-        
-        <Stack.Screen 
-          name="Feedback" 
+
+        <Stack.Screen
+          name="Feedback"
           component={Feedback}
         />
-        
+
         {/* Information Screens */}
-        <Stack.Screen 
-          name="About" 
+        <Stack.Screen
+          name="About"
           component={About}
         />
-        
-        <Stack.Screen 
-          name="Privacy" 
+
+        <Stack.Screen
+          name="Privacy"
           component={Privacy}
         />
       </Stack.Navigator>

@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import ResultService from './database/services/ResultService';
 import UserService from './database/services/UserService';
+import * as Print from 'expo-print';
 
 const { width, height } = Dimensions.get('window');
 
@@ -22,8 +23,8 @@ const Download = () => {
   const [selectedResult, setSelectedResult] = useState(null);
   const [detailModalVisible, setDetailModalVisible] = useState(false);
   const [expandedCards, setExpandedCards] = useState(new Set());
-  const [currentTab, setCurrentTab] = useState(0); // 0: My Results, 1: Departments
-  
+  const [currentTab, setCurrentTab] = useState(0); // 0: All Results, 1+: Department tabs
+
   const slideAnim = useRef(new Animated.Value(height)).current;
   const slideXAnim = useRef(new Animated.Value(0)).current;
 
@@ -49,7 +50,7 @@ const Download = () => {
   const loadResults = async () => {
     try {
       if (!currentUser) return;
-      
+
       const userResults = await ResultService.getResultsByUserId(currentUser.id);
       const resultsWithSubjects = Array.from(userResults).map(result => ({
         ...result,
@@ -108,8 +109,8 @@ const Download = () => {
         'Are you sure you want to delete this result?',
         [
           { text: 'Cancel', style: 'cancel' },
-          { 
-            text: 'Delete', 
+          {
+            text: 'Delete',
             style: 'destructive',
             onPress: async () => {
               const success = await ResultService.deleteResult(resultId);
@@ -130,28 +131,139 @@ const Download = () => {
     }
   };
 
+  const [isExporting, setIsExporting] = useState(false);
+
   const exportToPDF = async () => {
     try {
-      Alert.alert(
-        'Export Results',
-        'Export all saved results as PDF?',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { 
-            text: 'Export', 
-            onPress: async () => {
-              Alert.alert(
-                'Export Successful', 
-                'All results have been exported as PDF successfully!',
-                [{ text: 'OK' }]
-              );
-            }
-          }
-        ]
-      );
+      if (results.length === 0) {
+        Alert.alert('No Results', 'You have no saved results to export.');
+        return;
+      }
+
+      setIsExporting(true);
+
+      // Generate HTML content for the PDF
+      const htmlContent = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <style>
+            body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #333; padding: 20px; }
+            .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #232867; padding-bottom: 15px; }
+            .logo { font-size: 24px; font-weight: bold; color: #232867; }
+            .subtitle { font-size: 14px; color: #666; margin-top: 5px; }
+            
+            .user-info { margin-bottom: 30px; background-color: #f8fafc; padding: 15px; border-radius: 8px; }
+            .info-row { margin-bottom: 8px; }
+            .label { font-weight: bold; width: 100px; display: inline-block; color: #555; }
+            
+            .summary-table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
+            .summary-table th { background-color: #232867; color: white; padding: 10px; text-align: left; }
+            .summary-table td { border-bottom: 1px solid #eee; padding: 10px; }
+            
+            .semester-section { margin-bottom: 10px; page-break-inside: avoid; }
+            .semester-header { background-color: #e9edfa; padding: 10px 15px; border-left: 5px solid #232867; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; }
+            .semester-title { font-weight: bold; font-size: 16px; color: #232867; }
+            .semester-cgpa { font-weight: bold; background-color: #232867; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px; }
+            
+            .grades-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+            .grades-table th { border-bottom: 2px solid #ddd; text-align: left; padding: 8px; color: #555; }
+            .grades-table td { border-bottom: 1px solid #eee; padding: 8px; }
+            
+            .grade-badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 12px; font-weight: bold; color: white; text-align: center; min-width: 25px; }
+            
+            .footer { text-align: center; margin-top: 50px; font-size: 10px; color: #aaa; border-top: 1px solid #eee; padding-top: 20px; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <div class="logo">PKIET CGPA TRACKER</div>
+            <div class="subtitle">Official Academic Performance Report</div>
+          </div>
+          
+          <div class="user-info">
+            <div class="info-row">
+              <span class="label">Name:</span> ${currentUser.name || 'Student'}
+            </div>
+            <div class="info-row">
+              <span class="label">Reg. No:</span> ${currentUser.regNo || 'N/A'}
+            </div>
+            <div class="info-row">
+              <span class="label">Department:</span> ${currentUser.department || 'N/A'}
+            </div>
+            <div class="info-row">
+              <span class="label">Year:</span> ${currentUser.year || 'N/A'}
+            </div>
+            <div class="info-row">
+              <span class="label">Date:</span> ${new Date().toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' })}
+            </div>
+          </div>
+          
+          <h3>Academic Summary</h3>
+          <table class="summary-table">
+            <tr>
+              <th>Total Semesters</th>
+              <th>Average CGPA</th>
+              <th>Best CGPA</th>
+            </tr>
+            <tr>
+              <td>${results.length}</td>
+              <td>${stats.averageCGPA}</td>
+              <td>${stats.bestCGPA}</td>
+            </tr>
+          </table>
+          
+          <h3>Detailed Semester Records</h3>
+          
+          ${results.map(result => `
+            <div class="semester-section">
+              <div class="semester-header">
+                <span class="semester-title">Semester ${result.semester}</span>
+                <span class="semester-cgpa">CGPA: ${result.value}</span>
+              </div>
+              
+              <table class="grades-table">
+                <thead>
+                  <tr>
+                    <th width="15%">Code</th>
+                    <th width="65%">Subject</th>
+                    <th width="20%">Grade</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${result.subjects.map(subject => `
+                    <tr>
+                      <td style="font-family: monospace; font-weight: bold;">${subject[0]}</td>
+                      <td>${subject[1]}</td>
+                      <td>
+                        <span class="grade-badge" style="background-color: ${getGradeColor(subject[2])}">
+                          ${subject[2]}
+                        </span>
+                      </td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+          `).join('')}
+          
+          <div class="footer">
+            Generated by PKIET CGPA Tracker App on ${new Date().toLocaleString()}
+          </div>
+        </body>
+        </html>
+      `;
+
+      // Open Print Dialog (works in Expo Go)
+      await Print.printAsync({
+        html: htmlContent,
+      });
+
     } catch (error) {
       console.error('Error exporting PDF:', error);
-      Alert.alert('Error', 'Failed to export results as PDF');
+      Alert.alert('Export Failed', 'An error occurred while generating the PDF.');
+    } finally {
+      setIsExporting(false);
     }
   };
 
@@ -169,14 +281,50 @@ const Download = () => {
     return gradeColors[grade] || '#757575';
   };
 
+  // Calculate unique departments from results
+  const uniqueDepartments = React.useMemo(() => {
+    const depts = [...new Set(results.map(r => r.department).filter(Boolean))];
+    return depts.sort(); // Sort alphabetically
+  }, [results]);
+
+  // Create tabs array dynamically
+  const tabs = React.useMemo(() => {
+    const tabsArray = [{ id: 'all', name: 'All Results', department: null }];
+    uniqueDepartments.forEach(dept => {
+      tabsArray.push({ id: dept, name: dept, department: dept });
+    });
+    return tabsArray;
+  }, [uniqueDepartments]);
+
+  // Get results for a specific tab
+  const getResultsForTab = (tabId) => {
+    if (tabId === 'all') return results;
+    return results.filter(r => r.department === tabId);
+  };
+
+  // Calculate stats for filtered results
+  const calculateStatsForResults = (filteredResults) => {
+    if (filteredResults.length === 0) return { averageCGPA: 0, bestCGPA: 0, totalResults: 0 };
+
+    const totalCGPA = filteredResults.reduce((sum, result) => sum + parseFloat(result.value), 0);
+    const averageCGPA = (totalCGPA / filteredResults.length).toFixed(2);
+    const bestCGPA = Math.max(...filteredResults.map(result => parseFloat(result.value))).toFixed(2);
+
+    return {
+      averageCGPA,
+      bestCGPA,
+      totalResults: filteredResults.length
+    };
+  };
+
   // Calculate overall stats
   const calculateStats = () => {
     if (results.length === 0) return { averageCGPA: 0, bestCGPA: 0, totalResults: 0 };
-    
+
     const totalCGPA = results.reduce((sum, result) => sum + parseFloat(result.value), 0);
     const averageCGPA = (totalCGPA / results.length).toFixed(2);
     const bestCGPA = Math.max(...results.map(result => parseFloat(result.value))).toFixed(2);
-    
+
     return {
       averageCGPA,
       bestCGPA,
@@ -184,53 +332,14 @@ const Download = () => {
     };
   };
 
-  // Get custom SEM results
-  const getCustomResults = () => {
-    return results.filter(result => result.isCustom);
-  };
 
-  // Sample departments data
-  const departments = [
-    {
-      id: 1,
-      name: "Computer Science & Engineering",
-      code: "CSE",
-      totalStudents: 120,
-      avgCGPA: 8.5,
-      semesters: [
-        { id: 1, name: "SEMESTER I", cgpa: 8.2, subjects: [
-          ["CSE101", "Programming Fundamentals", "A"],
-          ["CSE102", "Data Structures", "B+"],
-          ["MTH101", "Mathematics I", "A"],
-          ["PHY101", "Physics", "A+"],
-        ]},
-        { id: 2, name: "SEMESTER II", cgpa: 8.6, subjects: [
-          ["CSE201", "Algorithms", "A+"],
-          ["CSE202", "Database Systems", "A"],
-          ["MTH201", "Mathematics II", "B+"],
-          ["CSE203", "OOP with Java", "A"],
-        ]}
-      ]
-    },
-    {
-      id: 2,
-      name: "Information Technology",
-      code: "IT",
-      totalStudents: 90,
-      avgCGPA: 8.3,
-      semesters: [
-        { id: 1, name: "SEMESTER I", cgpa: 8.1, subjects: [
-          ["ITA101", "Programming in C", "A"],
-          ["ITA102", "Web Technologies", "B+"],
-          ["MAA101", "Mathematics I", "A"],
-          ["CYA101", "Chemistry", "A"],
-        ]}
-      ]
-    }
-  ];
 
-  const stats = calculateStats();
-  const customResults = getCustomResults();
+  // Get current tab results and stats
+  const currentTabResults = React.useMemo(() => {
+    return getResultsForTab(tabs[currentTab]?.id);
+  }, [tabs, currentTab, results]);
+
+  const stats = calculateStatsForResults(currentTabResults);
 
   if (!currentUser) {
     return (
@@ -259,25 +368,25 @@ const Download = () => {
       </View>
 
       {/* Overall Progress */}
-      {results.length > 0 && (
+      {currentTabResults.length > 0 && (
         <View style={styles.overallProgress}>
           <View style={styles.progressHeader}>
             <Text style={styles.progressTitle}>Overall Academic Progress</Text>
             <Text style={styles.progressValue}>{stats.averageCGPA} / 10.0</Text>
           </View>
           <View style={styles.progressContainer}>
-            <View 
+            <View
               style={[
-                styles.progressBar, 
+                styles.progressBar,
                 { width: `${(stats.averageCGPA / 10) * 100}%` }
-              ]} 
+              ]}
             />
           </View>
         </View>
       )}
 
       {/* Results List */}
-      {results.length === 0 ? (
+      {currentTabResults.length === 0 ? (
         <View style={styles.emptyState}>
           <Text style={styles.emptyStateText}>No saved results yet</Text>
           <Text style={styles.emptyStateSubtext}>
@@ -286,10 +395,10 @@ const Download = () => {
         </View>
       ) : (
         <View style={styles.resultsList}>
-          {results.map((result, index) => (
+          {currentTabResults.map((result, index) => (
             <View key={result.id} style={styles.resultCard}>
               {/* Card Header */}
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.cardHeader}
                 onPress={() => toggleCardExpansion(result.id)}
                 activeOpacity={0.7}
@@ -324,7 +433,7 @@ const Download = () => {
                         <Text style={styles.codeText}>{subject[0]}</Text>
                         <Text style={styles.subjectText}>{subject[1]}</Text>
                         <View style={styles.gradeContainer}>
-                          <View 
+                          <View
                             style={[
                               styles.gradeChip,
                               { backgroundColor: getGradeColor(subject[2]) }
@@ -339,23 +448,23 @@ const Download = () => {
 
                   {/* Progress Bar */}
                   <View style={styles.cardProgressContainer}>
-                    <View 
+                    <View
                       style={[
-                        styles.cardProgressBar, 
+                        styles.cardProgressBar,
                         { width: `${(parseFloat(result.value) / 10) * 100}%` }
-                      ]} 
+                      ]}
                     />
                   </View>
 
                   {/* Action Buttons */}
                   <View style={styles.cardActions}>
-                    <TouchableOpacity 
+                    <TouchableOpacity
                       style={styles.detailsButton}
                       onPress={() => openResultDetails(result)}
                     >
                       <Text style={styles.detailsButtonText}>📋 Details</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity 
+                    <TouchableOpacity
                       style={styles.deleteCardButton}
                       onPress={() => deleteResult(result.id)}
                     >
@@ -371,227 +480,20 @@ const Download = () => {
 
       {/* Export Button */}
       {results.length > 0 && (
-        <TouchableOpacity style={styles.exportButton} onPress={exportToPDF}>
-          <Text style={styles.exportButtonText}>📄 Export All as PDF</Text>
+        <TouchableOpacity
+          style={[styles.exportButton, isExporting && styles.exportButtonDisabled]}
+          onPress={exportToPDF}
+          disabled={isExporting}
+        >
+          <Text style={styles.exportButtonText}>
+            {isExporting ? '⏳ Generating PDF...' : '📄 Export All as PDF'}
+          </Text>
         </TouchableOpacity>
       )}
     </ScrollView>
   );
 
-  const renderDepartmentsTab = () => (
-    <ScrollView style={styles.tabContent} showsVerticalScrollIndicator={false}>
-      {/* Department Stats */}
-      <View style={styles.departmentStats}>
-        <View style={styles.departmentStatCard}>
-          <Text style={styles.departmentStatNumber}>{departments.length}</Text>
-          <Text style={styles.departmentStatLabel}>Departments</Text>
-        </View>
-        <View style={styles.departmentStatCard}>
-          <Text style={styles.departmentStatNumber}>
-            {departments.reduce((sum, dept) => sum + dept.totalStudents, 0)}
-          </Text>
-          <Text style={styles.departmentStatLabel}>Total Students</Text>
-        </View>
-        <View style={styles.departmentStatCard}>
-          <Text style={styles.departmentStatNumber}>
-            {(departments.reduce((sum, dept) => sum + dept.avgCGPA, 0) / departments.length).toFixed(1)}
-          </Text>
-          <Text style={styles.departmentStatLabel}>Avg CGPA</Text>
-        </View>
-      </View>
 
-      {/* Custom SEM Results Section */}
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Custom SEM Results</Text>
-        <Text style={styles.sectionSubtitle}>Your personalized semester records</Text>
-      </View>
-
-      {customResults.length === 0 ? (
-        <View style={styles.emptyState}>
-          <Text style={styles.emptyStateText}>No Custom SEM Results</Text>
-          <Text style={styles.emptyStateSubtext}>
-            Create custom semester results to see them here.
-          </Text>
-        </View>
-      ) : (
-        <View style={styles.customResultsList}>
-          {customResults.map((result, index) => (
-            <View key={result.id} style={styles.resultCard}>
-              <TouchableOpacity 
-                style={styles.cardHeader}
-                onPress={() => toggleCardExpansion(result.id)}
-                activeOpacity={0.7}
-              >
-                <View style={styles.headerLeft}>
-                  <Text style={styles.semesterText}>{result.semester}</Text>
-                  <View style={styles.cgpaBadge}>
-                    <Text style={styles.cgpaBadgeText}>CGPA: {result.value}</Text>
-                  </View>
-                </View>
-                <View style={styles.expandIcon}>
-                  <Text style={styles.expandIconText}>
-                    {expandedCards.has(result.id) ? '▲' : '▼'}
-                  </Text>
-                </View>
-              </TouchableOpacity>
-
-              {expandedCards.has(result.id) && (
-                <View style={styles.cardBody}>
-                  <View style={styles.tableContainer}>
-                    <View style={styles.tableHeader}>
-                      <Text style={styles.tableHeaderText}>Code</Text>
-                      <Text style={styles.tableHeaderText}>Subject</Text>
-                      <Text style={styles.tableHeaderText}>Grade</Text>
-                    </View>
-
-                    {result.subjects.map((subject, subjectIndex) => (
-                      <View key={subjectIndex} style={styles.tableRow}>
-                        <Text style={styles.codeText}>{subject[0]}</Text>
-                        <Text style={styles.subjectText}>{subject[1]}</Text>
-                        <View style={styles.gradeContainer}>
-                          <View 
-                            style={[
-                              styles.gradeChip,
-                              { backgroundColor: getGradeColor(subject[2]) }
-                            ]}
-                          >
-                            <Text style={styles.gradeText}>{subject[2]}</Text>
-                          </View>
-                        </View>
-                      </View>
-                    ))}
-                  </View>
-
-                  <View style={styles.cardProgressContainer}>
-                    <View 
-                      style={[
-                        styles.cardProgressBar, 
-                        { width: `${(parseFloat(result.value) / 10) * 100}%` }
-                      ]} 
-                    />
-                  </View>
-
-                  <View style={styles.cardActions}>
-                    <TouchableOpacity 
-                      style={styles.detailsButton}
-                      onPress={() => openResultDetails(result)}
-                    >
-                      <Text style={styles.detailsButtonText}>📋 Details</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity 
-                      style={styles.deleteCardButton}
-                      onPress={() => deleteResult(result.id)}
-                    >
-                      <Text style={styles.deleteCardButtonText}>🗑️ Delete</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              )}
-            </View>
-          ))}
-        </View>
-      )}
-
-      {/* Department List Section */}
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>All Departments</Text>
-        <Text style={styles.sectionSubtitle}>Standard department curriculum</Text>
-      </View>
-
-      <View style={styles.departmentsList}>
-        {departments.map((department) => (
-          <View key={department.id} style={styles.departmentCard}>
-            <TouchableOpacity 
-              style={styles.departmentHeader}
-              onPress={() => toggleCardExpansion(`dept-${department.id}`)}
-              activeOpacity={0.7}
-            >
-              <View style={styles.departmentHeaderLeft}>
-                <View>
-                  <Text style={styles.departmentName}>{department.name}</Text>
-                  <Text style={styles.departmentCode}>{department.code}</Text>
-                </View>
-                <View style={styles.departmentBadge}>
-                  <Text style={styles.departmentBadgeText}>CGPA: {department.avgCGPA}</Text>
-                </View>
-              </View>
-              <View style={styles.expandIcon}>
-                <Text style={styles.expandIconText}>
-                  {expandedCards.has(`dept-${department.id}`) ? '▲' : '▼'}
-                </Text>
-              </View>
-            </TouchableOpacity>
-
-            {expandedCards.has(`dept-${department.id}`) && (
-              <View style={styles.departmentBody}>
-                <View style={styles.departmentInfo}>
-                  <View style={styles.departmentInfoRow}>
-                    <Text style={styles.departmentInfoLabel}>Total Students:</Text>
-                    <Text style={styles.departmentInfoValue}>{department.totalStudents}</Text>
-                  </View>
-                  <View style={styles.departmentInfoRow}>
-                    <Text style={styles.departmentInfoLabel}>Average CGPA:</Text>
-                    <Text style={styles.departmentInfoValue}>{department.avgCGPA}</Text>
-                  </View>
-                </View>
-
-                {department.semesters.map((semester) => (
-                  <View key={semester.id} style={styles.semesterCard}>
-                    <TouchableOpacity 
-                      style={styles.semesterHeader}
-                      onPress={() => toggleCardExpansion(`dept-sem-${semester.id}`)}
-                      activeOpacity={0.7}
-                    >
-                      <View style={styles.semesterHeaderLeft}>
-                        <Text style={styles.semesterText}>{semester.name}</Text>
-                        <View style={styles.cgpaBadge}>
-                          <Text style={styles.cgpaBadgeText}>CGPA: {semester.cgpa}</Text>
-                        </View>
-                      </View>
-                      <View style={styles.expandIcon}>
-                        <Text style={styles.expandIconText}>
-                          {expandedCards.has(`dept-sem-${semester.id}`) ? '▲' : '▼'}
-                        </Text>
-                      </View>
-                    </TouchableOpacity>
-
-                    {expandedCards.has(`dept-sem-${semester.id}`) && (
-                      <View style={styles.semesterBody}>
-                        <View style={styles.tableContainer}>
-                          <View style={styles.tableHeader}>
-                            <Text style={styles.tableHeaderText}>Code</Text>
-                            <Text style={styles.tableHeaderText}>Subject</Text>
-                            <Text style={styles.tableHeaderText}>Grade</Text>
-                          </View>
-
-                          {semester.subjects.map((subject, subjectIndex) => (
-                            <View key={subjectIndex} style={styles.tableRow}>
-                              <Text style={styles.codeText}>{subject[0]}</Text>
-                              <Text style={styles.subjectText}>{subject[1]}</Text>
-                              <View style={styles.gradeContainer}>
-                                <View 
-                                  style={[
-                                    styles.gradeChip,
-                                    { backgroundColor: getGradeColor(subject[2]) }
-                                  ]}
-                                >
-                                  <Text style={styles.gradeText}>{subject[2]}</Text>
-                                </View>
-                              </View>
-                            </View>
-                          ))}
-                        </View>
-                      </View>
-                    )}
-                  </View>
-                ))}
-              </View>
-            )}
-          </View>
-        ))}
-      </View>
-    </ScrollView>
-  );
 
   return (
     <View style={styles.container}>
@@ -602,39 +504,39 @@ const Download = () => {
       </View>
 
       {/* Tab Navigation */}
-      <View style={styles.tabContainer}>
-        <TouchableOpacity 
-          style={[styles.tab, currentTab === 0 && styles.activeTab]}
-          onPress={() => switchTab(0)}
-        >
-          <Text style={[styles.tabText, currentTab === 0 && styles.activeTabText]}>
-            My Results ({results.length})
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={[styles.tab, currentTab === 1 && styles.activeTab]}
-          onPress={() => switchTab(1)}
-        >
-          <Text style={[styles.tabText, currentTab === 1 && styles.activeTabText]}>
-            Departments
-          </Text>
-        </TouchableOpacity>
-      </View>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.tabContainer}
+        contentContainerStyle={styles.tabScrollContent}
+      >
+        {tabs.map((tab, index) => (
+          <TouchableOpacity
+            key={tab.id}
+            style={[styles.tab, currentTab === index && styles.activeTab]}
+            onPress={() => switchTab(index)}
+          >
+            <Text style={[styles.tabText, currentTab === index && styles.activeTabText]}>
+              {tab.name}
+              {tab.id === 'all' && ` (${results.length})`}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
 
       {/* Sliding Content */}
       <View style={styles.contentContainer}>
-        <Animated.View 
+        <Animated.View
           style={[
             styles.slidingContent,
             { transform: [{ translateX: slideXAnim }] }
           ]}
         >
-          <View style={styles.tabPage}>
-            {renderMyResultsTab()}
-          </View>
-          <View style={styles.tabPage}>
-            {renderDepartmentsTab()}
-          </View>
+          {tabs.map((tab, index) => (
+            <View key={tab.id} style={styles.tabPage}>
+              {renderMyResultsTab()}
+            </View>
+          ))}
         </Animated.View>
       </View>
 
@@ -646,7 +548,7 @@ const Download = () => {
         onRequestClose={closeResultDetails}
       >
         <View style={styles.modalOverlay}>
-          <Animated.View 
+          <Animated.View
             style={[
               styles.modalContent,
               { transform: [{ translateY: slideAnim }] }
@@ -714,7 +616,7 @@ const Download = () => {
                 </View>
 
                 <View style={styles.modalActions}>
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     style={styles.deleteButton}
                     onPress={() => deleteResult(selectedResult.id)}
                   >
@@ -748,38 +650,41 @@ const styles = StyleSheet.create({
   // Header
   headerBar: {
     backgroundColor: '#232867',
-    paddingVertical: 40,
+    paddingVertical: 10,
     paddingHorizontal: 20,
     alignItems: 'center',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    elevation: 8,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
   },
   title: {
-    fontSize: 28,
+    fontSize: 22,
     fontWeight: 'bold',
     color: 'white',
-    marginBottom: 8,
+    marginBottom: 2,
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: 14,
     color: '#87ceeb',
     fontWeight: '300',
   },
   // Tab Navigation
   tabContainer: {
-    flexDirection: 'row',
     backgroundColor: '#232867',
+    flexGrow: 0,
+  },
+  tabScrollContent: {
     paddingHorizontal: 20,
   },
   tab: {
-    flex: 1,
     paddingVertical: 15,
+    paddingHorizontal: 15,
     alignItems: 'center',
     borderBottomWidth: 3,
     borderBottomColor: 'transparent',
+    marginRight: 5,
   },
   activeTab: {
     borderBottomColor: '#87ceeb',
@@ -823,14 +728,16 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
     borderRadius: 15,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    borderWidth: 2,
+    borderColor: '#87ceeb',
+    shadowColor: '#232867',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 4,
   },
   statNumber: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: 'bold',
     color: '#232867',
     marginBottom: 5,
@@ -838,7 +745,7 @@ const styles = StyleSheet.create({
   statLabel: {
     fontSize: 12,
     color: '#3a4285',
-    fontWeight: '500',
+    fontWeight: '600',
   },
   // Overall Progress
   overallProgress: {
@@ -888,11 +795,13 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
     borderRadius: 16,
     marginBottom: 15,
-    shadowColor: '#000',
+    borderLeftWidth: 4,
+    borderLeftColor: '#87ceeb',
+    shadowColor: '#232867',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
+    shadowOpacity: 0.2,
     shadowRadius: 8,
-    elevation: 5,
+    elevation: 6,
     overflow: 'hidden',
   },
   cardHeader: {
@@ -1049,36 +958,44 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: 40,
     marginTop: 20,
+    backgroundColor: 'white',
+    marginHorizontal: 20,
+    borderRadius: 16,
+    borderWidth: 2,
+    borderStyle: 'dashed',
+    borderColor: '#87ceeb',
   },
   emptyStateText: {
-    fontSize: 18,
-    color: '#666',
+    fontSize: 20,
+    color: '#232867',
     marginBottom: 10,
-    fontWeight: '600',
+    fontWeight: 'bold',
   },
   emptyStateSubtext: {
     fontSize: 14,
-    color: '#999',
+    color: '#666',
     textAlign: 'center',
-    lineHeight: 20,
+    lineHeight: 22,
+    paddingHorizontal: 20,
   },
   // Export Button
   exportButton: {
     margin: 20,
-    backgroundColor: '#4CAF50',
-    paddingVertical: 15,
+    backgroundColor: '#232867',
+    paddingVertical: 16,
     borderRadius: 25,
     alignItems: 'center',
-    shadowColor: '#000',
+    shadowColor: '#232867',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    elevation: 6,
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 8,
   },
   exportButtonText: {
     color: 'white',
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: 'bold',
+    letterSpacing: 0.5,
   },
   // Section Headers
   sectionHeader: {
@@ -1329,6 +1246,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
   },
+  exportButtonDisabled: {
+    opacity: 0.7,
+    backgroundColor: '#9ca3af',
+  }
 });
 
 export default Download;

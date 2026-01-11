@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet, Dimensions } from 'react-nati
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
-export default function SubjectCard({ subject, selectedGrade, onGradeChange, gradeOptions = ['S','A','B','C','D','E','F'] }) {
+export default function SubjectCard({ subject, selectedGrade, onGradeChange, gradeOptions = ['S', 'A', 'B', 'C', 'D', 'E', 'F'] }) {
   if (!subject) return null;
 
   return (
