@@ -42,6 +42,7 @@ export default function CombinedCGPATracker({ navigation }) {
   const [currentDepartment, setCurrentDepartment] = useState('Custom');
 
   // Use same grade scale & UI as CGPA Calculator (S, A, B, C, D, E, F)
+  // Standard Grade Scale (S, A, B, C, D, E, F)
   const gradePoints = {
     S: 10,
     A: 9,
@@ -132,7 +133,7 @@ export default function CombinedCGPATracker({ navigation }) {
 
     // Calculate CGPA first
     const cgpa = calculateCurrentCGPA();
-    
+
     // Navigate directly to Result screen without saving first
     navigation.navigate('Result', {
       cgpa: parseFloat(cgpa),
@@ -140,19 +141,19 @@ export default function CombinedCGPATracker({ navigation }) {
       department: currentDepartment,
       totalSubjects: subjects.length,
       isCustom: true,
-        // Pass subjects data for display in Result screen
-        subjects: subjects.map(s => {
-          const key = s.code || s.id;
-          const selectedGrade = grades[key] || null;
-          return {
-            id: s.id || (s.code || '') + '-' + (s.name || '').slice(0,4),
-            code: s.code || '',
-            name: s.name || '',
-            credits: s.credits || 0,
-            grade: selectedGrade,
-            gradePoints: selectedGrade ? (gradePoints[selectedGrade] || 0) : (s.gradePoints || 0)
-          };
-        })
+      // Pass subjects data for display in Result screen
+      subjects: subjects.map(s => {
+        const key = s.code || s.id;
+        const selectedGrade = grades[key] || null;
+        return {
+          id: s.id || (s.code || '') + '-' + (s.name || '').slice(0, 4),
+          code: s.code || '',
+          name: s.name || '',
+          credits: s.credits || 0,
+          grade: selectedGrade,
+          gradePoints: selectedGrade ? (gradePoints[selectedGrade] || 0) : (s.gradePoints || 0)
+        };
+      })
     });
   };
 
@@ -199,12 +200,12 @@ export default function CombinedCGPATracker({ navigation }) {
 
   // Subject Input Screen Content
   const renderSubjectInput = () => (
-    <KeyboardAvoidingView 
-      style={styles.flex1} 
+    <KeyboardAvoidingView
+      style={styles.flex1}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <ScrollView 
-        style={styles.scrollView} 
+      <ScrollView
+        style={styles.scrollView}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
@@ -245,7 +246,7 @@ export default function CombinedCGPATracker({ navigation }) {
           {subjects.length > 0 && (
             <View style={styles.previewContainer}>
               <Text style={styles.sectionTitle}>Added Subjects ({subjects.length})</Text>
-              
+
               <FlatList
                 data={subjects}
                 keyExtractor={item => item.id}
@@ -259,7 +260,7 @@ export default function CombinedCGPATracker({ navigation }) {
                 showsVerticalScrollIndicator={false}
                 style={styles.previewList}
               />
-              
+
               <PrimaryButton
                 title="Proceed to Grade Selection"
                 iconName="arrow-right"
@@ -276,8 +277,8 @@ export default function CombinedCGPATracker({ navigation }) {
 
   // Grade Selection Screen Content
   const renderGradeSelection = () => (
-    <ScrollView 
-      style={styles.scrollView} 
+    <ScrollView
+      style={styles.scrollView}
       showsVerticalScrollIndicator={false}
       contentContainerStyle={styles.scrollContent}
     >
@@ -285,7 +286,7 @@ export default function CombinedCGPATracker({ navigation }) {
         <View style={styles.subjectsContainer}>
           <Text style={styles.sectionTitle}>Select Grades</Text>
           <Text style={styles.subtitle}>Tap on the grade for each subject</Text>
-          
+
           {subjects.map((subject) => (
             <SubjectCard
               key={subject.id}
@@ -295,7 +296,7 @@ export default function CombinedCGPATracker({ navigation }) {
             />
           ))}
         </View>
-        
+
         <View style={styles.calculateContainer}>
           <PrimaryButton
             title="Calculate CGPA"
@@ -304,7 +305,7 @@ export default function CombinedCGPATracker({ navigation }) {
             style={styles.calcBtn}
             textStyle={styles.calcBtnText}
           />
-          
+
           <TouchableOpacity style={styles.backButton} onPress={() => setCurrentScreen('input')}>
             <FontAwesome5 name="arrow-left" size={14} color="#232867" style={styles.buttonIcon} />
             <Text style={styles.backButtonText}>Back to Subjects</Text>
@@ -324,7 +325,7 @@ export default function CombinedCGPATracker({ navigation }) {
       </View>
 
       {renderHeader()}
-      
+
       {currentScreen === 'input' && renderSubjectInput()}
       {currentScreen === 'grades' && renderGradeSelection()}
     </SafeAreaView>
@@ -334,14 +335,14 @@ export default function CombinedCGPATracker({ navigation }) {
 // --- IMPROVED STYLES ---
 const styles = StyleSheet.create({
   // Layout
-  root: { 
-    flex: 1, 
-    backgroundColor: '#e9edfa' 
+  root: {
+    flex: 1,
+    backgroundColor: '#e9edfa'
   },
   flex1: {
     flex: 1,
   },
-  
+
   // Navigation
   stickyNavBar: {
     flexDirection: 'row',
@@ -353,18 +354,18 @@ const styles = StyleSheet.create({
     borderBottomColor: '#ecedf6',
     justifyContent: 'space-between',
   },
-  navContent: { 
-    flex: 1, 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    justifyContent: 'space-between' 
+  navContent: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between'
   },
-  navTitle: { 
-    flex: 1, 
-    fontSize: 18, 
-    fontWeight: 'bold', 
-    color: '#232867', 
-    textAlign: 'center' 
+  navTitle: {
+    flex: 1,
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#232867',
+    textAlign: 'center'
   },
 
   // Header
@@ -556,10 +557,10 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 6,
   },
-  calcBtnText: { 
-    color: '#fff', 
-    fontSize: 18, 
-    fontWeight: 'bold', 
+  calcBtnText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: 'bold',
     letterSpacing: 0.5,
   },
   backButton: {

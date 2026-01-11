@@ -26,13 +26,13 @@ const { width, height } = Dimensions.get('window');
 const Result = () => {
   const navigation = useNavigation();
   const route = useRoute();
-  
+
   const [currentUser, setCurrentUser] = useState(null);
   const [customSubjects, setCustomSubjects] = useState([]);
   const [currentSemester, setCurrentSemester] = useState('');
   const [currentDepartment, setCurrentDepartment] = useState('');
   const [calculationResult, setCalculationResult] = useState(null);
-  
+
   // UI States from beautiful design
   const [message, setMessage] = useState('');
   const [emoji, setEmoji] = useState('🌟');
@@ -130,20 +130,18 @@ const Result = () => {
   };
 
   const setGradeClassification = (cgpaValue) => {
-    if (cgpaValue >= 9.5) {
-      setGradeInfo({ grade: 'O', color: '#10b981' });
-    } else if (cgpaValue >= 9.0) {
-      setGradeInfo({ grade: 'A+', color: '#059669' });
-    } else if (cgpaValue >= 8.5) {
-      setGradeInfo({ grade: 'A', color: '#0d9488' });
-    } else if (cgpaValue >= 7.5) {
-      setGradeInfo({ grade: 'B+', color: '#0891b2' });
-    } else if (cgpaValue >= 6.5) {
-      setGradeInfo({ grade: 'B', color: '#0284c7' });
-    } else if (cgpaValue >= 5.5) {
-      setGradeInfo({ grade: 'C', color: '#dc6803' });
-    } else if (cgpaValue >= 4.5) {
-      setGradeInfo({ grade: 'P', color: '#dc2626' });
+    if (cgpaValue >= 9.0) {
+      setGradeInfo({ grade: 'S', color: '#10b981' });
+    } else if (cgpaValue >= 8.0) {
+      setGradeInfo({ grade: 'A', color: '#059669' });
+    } else if (cgpaValue >= 7.0) {
+      setGradeInfo({ grade: 'B', color: '#0d9488' });
+    } else if (cgpaValue >= 6.0) {
+      setGradeInfo({ grade: 'C', color: '#0891b2' });
+    } else if (cgpaValue >= 5.0) {
+      setGradeInfo({ grade: 'D', color: '#0284c7' });
+    } else if (cgpaValue >= 4.0) {
+      setGradeInfo({ grade: 'E', color: '#dc6803' });
     } else {
       setGradeInfo({ grade: 'F', color: '#991b1b' });
     }
@@ -223,7 +221,7 @@ const Result = () => {
 
       const result = ResultService.calculateUniversalGPA(subjects);
       const gradeColor = ResultService.getGradeColor(result.grade);
-      
+
       setCalculationResult({
         ...result,
         semester,
@@ -232,7 +230,7 @@ const Result = () => {
         grade: result.grade,
         gradeColor: gradeColor
       });
-      
+
       console.log('✅ Department result calculated successfully:', result);
     } catch (error) {
       console.error('❌ Error calculating department result:', error);
@@ -250,7 +248,7 @@ const Result = () => {
 
       const result = ResultService.calculateUniversalGPA(subjects);
       const gradeColor = ResultService.getGradeColor(result.grade);
-      
+
       setCalculationResult({
         ...result,
         semester: currentSemester,
@@ -260,7 +258,7 @@ const Result = () => {
         gradeColor: gradeColor,
         subjects: subjects
       });
-      
+
       console.log('✅ Custom result calculated successfully:', result);
     } catch (error) {
       console.error('❌ Error calculating custom result:', error);
@@ -268,7 +266,7 @@ const Result = () => {
     }
   };
 
-  
+
 
   const saveResult = async () => {
     try {
@@ -285,24 +283,25 @@ const Result = () => {
         totalSubjects: calculationResult.totalSubjects,
         isCustom: calculationResult.isCustom,
         grade: calculationResult.grade,
-        gradeColor: calculationResult.gradeColor
+        gradeColor: calculationResult.gradeColor,
+        subjects: calculationResult.subjects || route.params.historySubjects // Pass full subject data
       };
 
       await ResultService.saveResult(resultData);
       setSaved(true);
 
-      // Navigate directly to Dashboard after saving without delay
+      // Navigate back to Dashboard after a brief delay so the user sees the "Saved" state
       setTimeout(() => {
         navigation.navigate('Dashboard');
-      }, 500);
-      
+      }, 1500);
+
     } catch (error) {
       console.error('Error saving result:', error);
       Alert.alert('Error', 'Failed to save result');
     }
   };
 
-  
+
 
   const calculatePercentage = (cgpaValue) => {
     return ((cgpaValue * 10) - 7.5).toFixed(1);
@@ -333,7 +332,7 @@ const Result = () => {
         end={{ x: 1, y: 1 }}
         style={styles.container}
       >
-        <ScrollView 
+        <ScrollView
           style={styles.scrollView}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollContent}
@@ -344,17 +343,17 @@ const Result = () => {
             <View style={styles.infoContainer}>
               {currentDepartment && (
                 <Text style={styles.departmentText}>
-                  {currentDepartment === 'CSE' ? 'Computer Science Engineering' : 
-                   currentDepartment === 'IT' ? 'Information Technology' : 
-                   currentDepartment === 'EEE' ? 'Electrical & Electronics Engineering' :
-                   currentDepartment}
+                  {currentDepartment === 'CSE' ? 'Computer Science Engineering' :
+                    currentDepartment === 'IT' ? 'Information Technology' :
+                      currentDepartment === 'EEE' ? 'Electrical & Electronics Engineering' :
+                        currentDepartment}
                 </Text>
               )}
               <Text style={styles.heading}>
                 {calculationResult.isCustom ? 'CUSTOM SUBJECTS' : `SEMESTER ${currentSemester}`}
               </Text>
               <Text style={styles.cgpaText}>CGPA: {calculationResult.gpa}</Text>
-                {/* Grade badge removed from Result UI per design */}
+              {/* Grade badge removed from Result UI per design */}
             </View>
 
             {/* Animated Emoji */}
@@ -389,7 +388,7 @@ const Result = () => {
             {/* Action Buttons */}
             <View style={styles.buttonContainer}>
               {/* Add Subject removed from Result page */}
-              
+
               <TouchableOpacity onPress={saveResult} activeOpacity={0.8} disabled={saved}>
                 <LinearGradient
                   colors={saved ? ['#10b981', '#059669'] : ['#232867', '#4facfe']}

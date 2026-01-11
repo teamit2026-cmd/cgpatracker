@@ -16,6 +16,7 @@ import Svg, { Path, Defs, LinearGradient, Stop } from 'react-native-svg';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
+import { Picker } from '@react-native-picker/picker';
 
 // CORRECT PATHS
 import ResultService from './database/services/ResultService';
@@ -35,7 +36,7 @@ const COLORS = {
 };
 
 // Chart constants
-const CHART_HEIGHT = 200;
+const CHART_HEIGHT = 180;
 const CHART_WIDTH = screenWidth - 140;
 const MAX_CGPA = 10;
 const Y_AXIS_SCALE = [10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0];
@@ -46,6 +47,7 @@ const CGPAProgressChart = () => {
   const [overallCGPA, setOverallCGPA] = useState(0);
   const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState(null);
+  const [selectedDepartment, setSelectedDepartment] = useState('CSE'); // Default state
   const fadeAnimation = useRef(new Animated.Value(0)).current;
   const timeoutRef = useRef(null);
 
@@ -56,6 +58,13 @@ const CGPAProgressChart = () => {
     }, [])
   );
 
+  // Reload data when department changes
+  React.useEffect(() => {
+    if (currentUser) {
+      loadCGPAData(currentUser.id, selectedDepartment);
+    }
+  }, [selectedDepartment, currentUser]);
+
   const loadCurrentUserAndData = async () => {
     try {
       setLoading(true);
@@ -65,7 +74,10 @@ const CGPAProgressChart = () => {
       setCurrentUser(user);
 
       if (user) {
-        await loadCGPAData(user.id, user.department);
+        if (user.department) {
+          setSelectedDepartment(user.department);
+        }
+        await loadCGPAData(user.id, user.department || 'CSE');
       } else {
         // No user found - show empty data
         showEmptyData();
@@ -249,6 +261,21 @@ const CGPAProgressChart = () => {
           keyboardShouldPersistTaps="handled"
         >
           <View style={styles.centeredContent}>
+            {/* Department Filter */}
+            <Text style={styles.label}>Select department</Text>
+            <View style={styles.pickerWrapper}>
+              <Picker
+                selectedValue={selectedDepartment}
+                style={styles.picker}
+                onValueChange={(itemValue) => setSelectedDepartment(itemValue)}
+                mode="dropdown"
+              >
+                <Picker.Item label="Computer Science Engineering" value="CSE" />
+                <Picker.Item label="Information Technology" value="IT" />
+                <Picker.Item label="Electrical & Electronics Engineering" value="EEE" />
+              </Picker>
+            </View>
+
             {/* Chart Container */}
             <View style={styles.chartCard}>
               {/* Header */}
@@ -457,20 +484,45 @@ const styles = StyleSheet.create({
     color: COLORS.primaryDark,
     fontWeight: '500',
   },
+  label: {
+    fontWeight: 'bold',
+    fontSize: 14,
+    marginBottom: 4,
+    marginTop: 15,
+    color: '#232867',
+    alignSelf: 'flex-start'
+  },
   scrollContainer: {
     flex: 1,
   },
   scrollContent: {
     paddingVertical: 10,
+    paddingBottom: 0,
+  },
+  pickerWrapper: {
+    backgroundColor: '#f6f7fb',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: COLORS.secondary,
+    marginBottom: 10,
+    width: '100%',
+    overflow: 'hidden',
+    height: 55,
+    justifyContent: 'center',
+  },
+  picker: {
+    height: 55,
+    width: '100%',
+    color: COLORS.primaryDark,
   },
   centeredContent: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 15,
   },
   chartCard: {
     backgroundColor: '#ffffff',
     borderRadius: 16,
-    padding: 20,
-    marginBottom: 20,
+    padding: 15,
+    marginBottom: 10,
     elevation: 3,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -480,13 +532,13 @@ const styles = StyleSheet.create({
   chartHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 30,
-    paddingBottom: 15,
+    marginBottom: 20,
+    paddingBottom: 10,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.lightBlue,
   },
   headerTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '600',
     color: COLORS.primaryDark,
     marginLeft: 8,
@@ -514,20 +566,20 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
   },
   chartArea: {
-    height: 260,
+    height: 220,
     flexDirection: 'row',
     position: 'relative',
   },
   yAxisContainer: {
-    width: 40,
+    width: 35,
     height: CHART_HEIGHT,
     justifyContent: 'space-between',
     alignItems: 'flex-end',
-    paddingRight: 8,
-    marginTop: 20,
+    paddingRight: 6,
+    marginTop: 15,
   },
   yAxisLabel: {
-    fontSize: 12,
+    fontSize: 10,
     color: COLORS.primaryLight,
     fontWeight: '500',
     textAlign: 'right',
@@ -535,9 +587,9 @@ const styles = StyleSheet.create({
   chartContainer: {
     flex: 1,
     height: CHART_HEIGHT,
-    marginLeft: 12,
-    marginTop: 20,
-    marginRight: 10,
+    marginLeft: 8,
+    marginTop: 15,
+    marginRight: 8,
     position: 'relative',
   },
   gridLine: {
@@ -650,9 +702,9 @@ const styles = StyleSheet.create({
   averageCGPACard: {
     backgroundColor: COLORS.primary,
     borderRadius: 16,
-    padding: 24,
+    padding: 15,
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 10,
     elevation: 4,
     shadowColor: COLORS.primary,
     shadowOffset: { width: 0, height: 4 },
@@ -660,48 +712,48 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
   },
   averageCGPALabel: {
-    fontSize: 18,
+    fontSize: 16,
     color: '#ffffff',
     fontWeight: '500',
-    marginBottom: 8,
+    marginBottom: 4,
   },
   averageCGPAValue: {
-    fontSize: 48,
+    fontSize: 36,
     color: '#ffffff',
     fontWeight: 'bold',
   },
   averageCGPASubtext: {
-    fontSize: 14,
+    fontSize: 12,
     color: COLORS.secondary,
-    marginTop: 8,
+    marginTop: 4,
     fontWeight: '500',
   },
   statsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-around',
     backgroundColor: '#ffffff',
-    paddingVertical: 24,
-    paddingHorizontal: 16,
+    paddingVertical: 15,
+    paddingHorizontal: 10,
     borderRadius: 16,
     elevation: 3,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
-    marginBottom: 20,
+    marginBottom: 15,
   },
   statItem: {
     alignItems: 'center',
     flex: 1,
   },
   statValue: {
-    fontSize: 28,
+    fontSize: 20,
     fontWeight: 'bold',
     color: COLORS.primaryDark,
-    marginBottom: 4,
+    marginBottom: 2,
   },
   statLabel: {
-    fontSize: 14,
+    fontSize: 12,
     color: COLORS.primaryLight,
     fontWeight: '500',
   },
@@ -710,9 +762,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#f8f9fa',
-    padding: 12,
+    padding: 10,
     borderRadius: 8,
-    marginBottom: 30,
+    marginBottom: 5,
   },
   infoText: {
     fontSize: 12,
@@ -916,9 +968,9 @@ const styles = StyleSheet.create({
   averageCGPACard: {
     backgroundColor: COLORS.primary,
     borderRadius: 16,
-    padding: 24,
+    padding: 16,
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 12,
     elevation: 4,
     shadowColor: COLORS.primary,
     shadowOffset: { width: 0, height: 4 },
@@ -926,48 +978,48 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
   },
   averageCGPALabel: {
-    fontSize: 18,
+    fontSize: 16,
     color: '#ffffff',
     fontWeight: '500',
-    marginBottom: 8,
+    marginBottom: 4,
   },
   averageCGPAValue: {
-    fontSize: 48,
+    fontSize: 36,
     color: '#ffffff',
     fontWeight: 'bold',
   },
   averageCGPASubtext: {
-    fontSize: 14,
+    fontSize: 12,
     color: COLORS.secondary,
-    marginTop: 8,
+    marginTop: 4,
     fontWeight: '500',
   },
   statsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-around',
     backgroundColor: '#ffffff',
-    paddingVertical: 24,
-    paddingHorizontal: 16,
+    paddingVertical: 16,
+    paddingHorizontal: 12,
     borderRadius: 16,
     elevation: 3,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
-    marginBottom: 30,
+    marginBottom: 12,
   },
   statItem: {
     alignItems: 'center',
     flex: 1,
   },
   statValue: {
-    fontSize: 28,
+    fontSize: 22,
     fontWeight: 'bold',
     color: COLORS.primaryDark,
-    marginBottom: 4,
+    marginBottom: 2,
   },
   statLabel: {
-    fontSize: 14,
+    fontSize: 12,
     color: COLORS.primaryLight,
     fontWeight: '500',
   },

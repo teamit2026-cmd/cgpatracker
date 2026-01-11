@@ -307,14 +307,13 @@ export default function CGPACalculator({ navigation }) {
         subjects: formattedSubjects, // Add subjects array here
       };
 
-      await ResultService.saveResult(resultData);
-
       navigation.navigate('Result', {
         cgpa: result.gpa,
         semester,
         department,
         totalSubjects: result.totalSubjects,
         isCustom: semester === 'custom',
+        historySubjects: formattedSubjects, // Pass formatted subjects [code, name, grade]
       });
     } catch (error) {
       console.error('Error saving calculation result:', error);

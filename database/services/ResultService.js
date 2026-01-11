@@ -1,9 +1,15 @@
 import Realm from 'realm';
 import RealmDB from '../RealmDB';
 
-// ADD THIS CONSTANT AT THE TOP
+// CORRECTED grade points mapping - S, A, B, C, D, E, F Standard
 const gradePointsMapping = {
-  'S': 10, 'A': 9, 'B': 8, 'C': 7, 'D': 6, 'E': 5, 'F': 0
+  'S': 10,
+  'A': 9,
+  'B': 8,
+  'C': 7,
+  'D': 6,
+  'E': 5,
+  'F': 0
 };
 
 class ResultService {
@@ -72,7 +78,8 @@ class ResultService {
           credits = subject.credits;
         }
 
-        if (gradePoints > 0 && credits > 0) {
+        // Check if we have both points (can be 0 for F) and credits
+        if (credits > 0) {
           totalGradePoints += gradePoints * credits;
           totalCredits += credits;
           validSubjects++;
@@ -120,7 +127,6 @@ class ResultService {
         realm.write(() => {
           const now = new Date();
           // Coerce and validate fields to match Realm schema types
-          const id = resultData.id || RealmDB.getInstance().generateId();
           const userId = resultData.userId !== undefined && resultData.userId !== null
             ? String(resultData.userId)
             : '';
@@ -158,6 +164,25 @@ class ResultService {
               hour: '2-digit',
               minute: '2-digit'
             });
+
+          // 🔄 OVERWRITE LOGIC: Check if a result already exists for this user/semester/department
+          let id = resultData.id;
+
+          if (!id && !isCustom) { // Only overwrite for official semesters, not custom ones
+            const existing = realm.objects('Result').filtered(
+              'userId == $0 AND semester == $1 AND department == $2',
+              userId, semester, department
+            );
+
+            if (existing.length > 0) {
+              id = existing[0].id;
+              console.log(`♻️ Overwriting existing result for Sem ${semester}, Dept ${department}`);
+            } else {
+              id = RealmDB.getInstance().generateId();
+            }
+          } else if (!id) {
+            id = RealmDB.getInstance().generateId();
+          }
 
           const result = {
             id,

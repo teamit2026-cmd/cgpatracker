@@ -21,6 +21,7 @@ import Result from './Result';
 import CustomSubject from './custom_subject';
 import Download from './Download';
 import Privacy from './Privacy';
+import Syllabus from './Syllabus';
 
 const Stack = createStackNavigator();
 
@@ -209,6 +210,11 @@ function App() {
         <Stack.Screen
           name="Download"
           component={Download}
+        />
+
+        <Stack.Screen
+          name="Syllabus"
+          component={Syllabus}
         />
 
         <Stack.Screen
