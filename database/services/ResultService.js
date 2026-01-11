@@ -3,8 +3,7 @@ import RealmDB from '../RealmDB';
 
 // ADD THIS CONSTANT AT THE TOP
 const gradePointsMapping = {
-  'S': 10, 'O': 10, 'A+': 9, 'A': 8, 'B+': 7, 'B': 6, 'C': 5, 'D': 4, 'E': 3, 'F': 0,
-  'P': 4
+  'S': 10, 'A': 9, 'B': 8, 'C': 7, 'D': 6, 'E': 5, 'F': 0
 };
 
 class ResultService {
@@ -22,13 +21,12 @@ class ResultService {
   // ADD THIS METHOD TO YOUR ResultService.js
   getGradeColor(grade) {
     const gradeColors = {
-      'O': '#4CAF50',
-      'A+': '#4CAF50', 
+      'S': '#4CAF50',
       'A': '#8BC34A',
-      'B+': '#FFC107',
-      'B': '#FF9800',
-      'C': '#FF5722',
-      'P': '#9C27B0',
+      'B': '#FFC107',
+      'C': '#FF9800',
+      'D': '#FF5722',
+      'E': '#795548',
       'F': '#F44336'
     };
     return gradeColors[grade] || '#757575';
@@ -62,7 +60,7 @@ class ResultService {
             gradePoints = gradePointsMapping[gradeData.grade] || 0;
             credits = subject.credits || 0;
           }
-        } 
+        }
         // Handle custom subjects (from Realm with gradePoints property)
         else if (subject.gradePoints !== undefined && subject.credits) {
           gradePoints = subject.gradePoints;
@@ -105,12 +103,12 @@ class ResultService {
 
   // 🚀 NEW: Helper method to get grade from GPA value
   getGradeFromGPA(gpa) {
-    if (gpa >= 9.0) return 'O';
-    if (gpa >= 8.0) return 'A+';
-    if (gpa >= 7.0) return 'A';
-    if (gpa >= 6.0) return 'B+';
-    if (gpa >= 5.0) return 'B';
-    if (gpa >= 4.0) return 'C';
+    if (gpa >= 9.0) return 'S';
+    if (gpa >= 8.0) return 'A';
+    if (gpa >= 7.0) return 'B';
+    if (gpa >= 6.0) return 'C';
+    if (gpa >= 5.0) return 'D';
+    if (gpa >= 4.0) return 'E';
     return 'F';
   }
 
@@ -150,16 +148,16 @@ class ResultService {
           const dateFormatted = resultData.dateFormatted && typeof resultData.dateFormatted === 'string'
             ? resultData.dateFormatted
             : now.toLocaleDateString('en-IN', {
-                day: '2-digit',
-                month: 'short',
-                year: 'numeric'
-              });
+              day: '2-digit',
+              month: 'short',
+              year: 'numeric'
+            });
           const timeFormatted = resultData.timeFormatted && typeof resultData.timeFormatted === 'string'
             ? resultData.timeFormatted
             : now.toLocaleTimeString('en-IN', {
-                hour: '2-digit',
-                minute: '2-digit'
-              });
+              hour: '2-digit',
+              minute: '2-digit'
+            });
 
           const result = {
             id,
@@ -178,7 +176,7 @@ class ResultService {
             createdAt: now,
             syncedWithMongo: false,
           };
-          
+
           const savedResult = realm.create('Result', result, Realm.UpdateMode.Modified);
           resolve(savedResult);
         });
@@ -243,13 +241,22 @@ class ResultService {
   }
 
   // Get results for chart data (fo.js)
-  async getResultsForChart(userId) {
+  async getResultsForChart(userId, department = null) {
     try {
       const realm = await this.ensureRealm();
       // Get only non-custom results for semester-wise chart
-      const results = realm.objects('Result')
-        .filtered('userId == $0 AND isCustom == false', userId)
-        .sorted('semester', true);
+      // If department is provided, filter by it
+      let results;
+      if (department) {
+        results = realm.objects('Result')
+          .filtered('userId == $0 AND isCustom == false AND department == $1', userId, department)
+          .sorted('semester', true);
+      } else {
+        results = realm.objects('Result')
+          .filtered('userId == $0 AND isCustom == false', userId)
+          .sorted('semester', true);
+      }
+
       try {
         return Array.from(results).map(r => JSON.parse(JSON.stringify(r)));
       } catch (e) {
@@ -277,6 +284,27 @@ class ResultService {
         });
       } catch (error) {
         console.error('❌ Error deleting result:', error);
+        reject(error);
+      }
+    });
+  }
+
+  // Delete all results for user
+  async deleteAllResults(userId) {
+    const realm = await this.ensureRealm();
+    return new Promise((resolve, reject) => {
+      try {
+        realm.write(() => {
+          const results = realm.objects('Result').filtered('userId == $0', userId);
+          if (results.length > 0) {
+            realm.delete(results);
+            resolve(true);
+          } else {
+            resolve(false);
+          }
+        });
+      } catch (error) {
+        console.error('❌ Error deleting all results:', error);
         reject(error);
       }
     });

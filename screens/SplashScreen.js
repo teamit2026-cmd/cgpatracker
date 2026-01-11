@@ -15,7 +15,7 @@ const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
 const SplashScreen = ({ onAnimationComplete }) => {
   const navigation = useNavigation(); // Add navigation hook
-  
+
   // Animation values
   const containerOpacity = useRef(new Animated.Value(0)).current;
   const logoScale = useRef(new Animated.Value(0.5)).current;
@@ -24,17 +24,17 @@ const SplashScreen = ({ onAnimationComplete }) => {
   const fadeOut = useRef(new Animated.Value(1)).current;
   const particleAnim = useRef(new Animated.Value(0)).current;
   const progress = useRef(new Animated.Value(0)).current;
-  
+
   // Text animation state
   const [displayText, setDisplayText] = useState('');
   const [currentIndex, setCurrentIndex] = useState(0);
   const fullText = 'CGPA Tracker';
-  
+
   // Individual character animations
   const charAnimations = useRef(
     Array.from({ length: fullText.length }, () => new Animated.Value(0))
   ).current;
-  
+
   // Glow animation
   const glowAnim = useRef(new Animated.Value(0)).current;
 
@@ -135,8 +135,8 @@ const SplashScreen = ({ onAnimationComplete }) => {
         if (onAnimationComplete) {
           onAnimationComplete();
         }
-        // Navigate to Auth screen after animation completes
-        navigation.replace('Auth');
+        // Navigate to Dashboard after animation completes (bypassing Auth for now)
+        navigation.replace('Dashboard');
       });
     }, 4500);
   };
@@ -291,7 +291,7 @@ const SplashScreen = ({ onAnimationComplete }) => {
                   translateY: containerOpacity.interpolate({
                     inputRange: [0, 1],
                     outputRange: [20, 0],
-                  }), 
+                  }),
                 },
               ],
             },

@@ -10,6 +10,7 @@ import {
   Modal,
   Animated,
   Dimensions,
+  FlatList,
 } from 'react-native';
 import ResultService from './database/services/ResultService';
 import UserService from './database/services/UserService';
@@ -128,6 +129,35 @@ const Download = () => {
     } catch (error) {
       console.error('Error deleting result:', error);
       Alert.alert('Error', 'Failed to delete result');
+    }
+  };
+
+  const clearAllData = async () => {
+    try {
+      Alert.alert(
+        'Clear All Data',
+        'Are you sure you want to delete ALL your saved results? This action cannot be undone.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Delete All',
+            style: 'destructive',
+            onPress: async () => {
+              if (!currentUser) return;
+              const success = await ResultService.deleteAllResults(currentUser.id);
+              if (success) {
+                Alert.alert('Success', 'All results have been deleted.');
+                loadResults();
+              } else {
+                Alert.alert('Info', 'No results to delete.');
+              }
+            }
+          }
+        ]
+      );
+    } catch (error) {
+      console.error('Error clearing data:', error);
+      Alert.alert('Error', 'Failed to clear data.');
     }
   };
 
@@ -269,13 +299,12 @@ const Download = () => {
 
   const getGradeColor = (grade) => {
     const gradeColors = {
-      'O': '#4CAF50',
-      'A+': '#232867',
-      'A': '#3a4285',
-      'B+': '#5dade2',
-      'B': '#87ceeb',
-      'C': '#ff9800',
-      'P': '#9C27B0',
+      'S': '#4CAF50',
+      'A': '#8BC34A',
+      'B': '#FFC107',
+      'C': '#FF9800',
+      'D': '#FF5722',
+      'E': '#795548',
       'F': '#F44336'
     };
     return gradeColors[grade] || '#757575';
@@ -349,149 +378,178 @@ const Download = () => {
     );
   }
 
-  const renderMyResultsTab = () => (
-    <ScrollView style={styles.tabContent} showsVerticalScrollIndicator={false}>
-      {/* Stats Section */}
-      <View style={styles.statsContainer}>
-        <View style={styles.statCard}>
-          <Text style={styles.statNumber}>{stats.totalResults}</Text>
-          <Text style={styles.statLabel}>Saved Results</Text>
-        </View>
-        <View style={styles.statCard}>
-          <Text style={styles.statNumber}>{stats.averageCGPA}</Text>
-          <Text style={styles.statLabel}>Avg CGPA</Text>
-        </View>
-        <View style={styles.statCard}>
-          <Text style={styles.statNumber}>{stats.bestCGPA}</Text>
-          <Text style={styles.statLabel}>Best CGPA</Text>
-        </View>
-      </View>
+  const renderTabContent = (tabId) => {
+    const tabResults = getResultsForTab(tabId);
+    const tabStats = calculateStatsForResults(tabResults);
 
-      {/* Overall Progress */}
-      {currentTabResults.length > 0 && (
-        <View style={styles.overallProgress}>
-          <View style={styles.progressHeader}>
-            <Text style={styles.progressTitle}>Overall Academic Progress</Text>
-            <Text style={styles.progressValue}>{stats.averageCGPA} / 10.0</Text>
+    const renderHeader = () => (
+      <>
+        {/* Stats Section */}
+        <View style={styles.statsContainer}>
+          <View style={styles.statCard}>
+            <Text style={styles.statNumber}>{tabStats.totalResults}</Text>
+            <Text style={styles.statLabel}>Saved Results</Text>
           </View>
-          <View style={styles.progressContainer}>
-            <View
-              style={[
-                styles.progressBar,
-                { width: `${(stats.averageCGPA / 10) * 100}%` }
-              ]}
-            />
+          <View style={styles.statCard}>
+            <Text style={styles.statNumber}>{tabStats.averageCGPA}</Text>
+            <Text style={styles.statLabel}>Avg CGPA</Text>
+          </View>
+          <View style={styles.statCard}>
+            <Text style={styles.statNumber}>{tabStats.bestCGPA}</Text>
+            <Text style={styles.statLabel}>Best CGPA</Text>
           </View>
         </View>
-      )}
 
-      {/* Results List */}
-      {currentTabResults.length === 0 ? (
-        <View style={styles.emptyState}>
-          <Text style={styles.emptyStateText}>No saved results yet</Text>
-          <Text style={styles.emptyStateSubtext}>
-            Calculate your CGPA first and save the results to see them here.
-          </Text>
-        </View>
-      ) : (
-        <View style={styles.resultsList}>
-          {currentTabResults.map((result, index) => (
-            <View key={result.id} style={styles.resultCard}>
-              {/* Card Header */}
-              <TouchableOpacity
-                style={styles.cardHeader}
-                onPress={() => toggleCardExpansion(result.id)}
-                activeOpacity={0.7}
-              >
-                <View style={styles.headerLeft}>
-                  <Text style={styles.semesterText}>{result.semester}</Text>
-                  <View style={styles.cgpaBadge}>
-                    <Text style={styles.cgpaBadgeText}>CGPA: {result.value}</Text>
-                  </View>
-                </View>
-                <View style={styles.expandIcon}>
-                  <Text style={styles.expandIconText}>
-                    {expandedCards.has(result.id) ? '▲' : '▼'}
-                  </Text>
-                </View>
-              </TouchableOpacity>
+        {/* Overall Progress */}
+        {tabResults.length > 0 && (
+          <View style={styles.overallProgress}>
+            <View style={styles.progressHeader}>
+              <Text style={styles.progressTitle}>Overall Academic Progress</Text>
+              <Text style={styles.progressValue}>{tabStats.averageCGPA} / 10.0</Text>
+            </View>
+            <View style={styles.progressContainer}>
+              <View
+                style={[
+                  styles.progressBar,
+                  { width: `${(tabStats.averageCGPA / 10) * 100}%` }
+                ]}
+              />
+            </View>
+          </View>
+        )}
+      </>
+    );
 
-              {/* Card Body - Table Layout */}
-              {expandedCards.has(result.id) && (
-                <View style={styles.cardBody}>
-                  <View style={styles.tableContainer}>
-                    {/* Table Header */}
-                    <View style={styles.tableHeader}>
-                      <Text style={styles.tableHeaderText}>Code</Text>
-                      <Text style={styles.tableHeaderText}>Subject</Text>
-                      <Text style={styles.tableHeaderText}>Grade</Text>
-                    </View>
+    const renderFooter = () => (
+      <>
+        {/* Export Button */}
+        {tabResults.length > 0 && (
+          <TouchableOpacity
+            style={[styles.exportButton, isExporting && styles.exportButtonDisabled]}
+            onPress={exportToPDF}
+            disabled={isExporting}
+          >
+            <Text style={styles.exportButtonText}>
+              {isExporting ? '⏳ Generating PDF...' : '📄 Export All as PDF'}
+            </Text>
+          </TouchableOpacity>
+        )}
 
-                    {/* Table Rows */}
-                    {result.subjects.map((subject, subjectIndex) => (
-                      <View key={subjectIndex} style={styles.tableRow}>
-                        <Text style={styles.codeText}>{subject[0]}</Text>
-                        <Text style={styles.subjectText}>{subject[1]}</Text>
-                        <View style={styles.gradeContainer}>
-                          <View
-                            style={[
-                              styles.gradeChip,
-                              { backgroundColor: getGradeColor(subject[2]) }
-                            ]}
-                          >
-                            <Text style={styles.gradeText}>{subject[2]}</Text>
-                          </View>
-                        </View>
-                      </View>
-                    ))}
-                  </View>
+        {/* Clear All Results Button */}
+        {results.length > 0 && (
+          <TouchableOpacity
+            style={styles.clearAllButton}
+            onPress={clearAllData}
+          >
+            <Text style={styles.clearAllButtonText}>🗑️ Clear All History</Text>
+          </TouchableOpacity>
+        )}
+      </>
+    );
 
-                  {/* Progress Bar */}
-                  <View style={styles.cardProgressContainer}>
+    const renderItem = ({ item: result }) => (
+      <View style={styles.resultCard}>
+        {/* Card Header */}
+        <TouchableOpacity
+          style={styles.cardHeader}
+          onPress={() => toggleCardExpansion(result.id)}
+          activeOpacity={0.7}
+        >
+          <View style={styles.headerLeft}>
+            <Text style={styles.semesterText}>{result.semester}</Text>
+            <View style={styles.cgpaBadge}>
+              <Text style={styles.cgpaBadgeText}>CGPA: {result.value}</Text>
+            </View>
+          </View>
+          <View style={styles.expandIcon}>
+            <Text style={styles.expandIconText}>
+              {expandedCards.has(result.id) ? '▲' : '▼'}
+            </Text>
+          </View>
+        </TouchableOpacity>
+
+        {/* Card Body - Table Layout */}
+        {expandedCards.has(result.id) && (
+          <View style={styles.cardBody}>
+            <View style={styles.tableContainer}>
+              {/* Table Header */}
+              <View style={styles.tableHeader}>
+                <Text style={styles.tableHeaderText}>Code</Text>
+                <Text style={styles.tableHeaderText}>Subject</Text>
+                <Text style={styles.tableHeaderText}>Grade</Text>
+              </View>
+
+              {/* Table Rows */}
+              {result.subjects.map((subject, subjectIndex) => (
+                <View key={subjectIndex} style={styles.tableRow}>
+                  <Text style={styles.codeText}>{subject[0]}</Text>
+                  <Text style={styles.subjectText}>{subject[1]}</Text>
+                  <View style={styles.gradeContainer}>
                     <View
                       style={[
-                        styles.cardProgressBar,
-                        { width: `${(parseFloat(result.value) / 10) * 100}%` }
+                        styles.gradeChip,
+                        { backgroundColor: getGradeColor(subject[2]) }
                       ]}
-                    />
-                  </View>
-
-                  {/* Action Buttons */}
-                  <View style={styles.cardActions}>
-                    <TouchableOpacity
-                      style={styles.detailsButton}
-                      onPress={() => openResultDetails(result)}
                     >
-                      <Text style={styles.detailsButtonText}>📋 Details</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={styles.deleteCardButton}
-                      onPress={() => deleteResult(result.id)}
-                    >
-                      <Text style={styles.deleteCardButtonText}>🗑️ Delete</Text>
-                    </TouchableOpacity>
+                      <Text style={styles.gradeText}>{subject[2]}</Text>
+                    </View>
                   </View>
                 </View>
-              )}
+              ))}
             </View>
-          ))}
-        </View>
-      )}
 
-      {/* Export Button */}
-      {results.length > 0 && (
-        <TouchableOpacity
-          style={[styles.exportButton, isExporting && styles.exportButtonDisabled]}
-          onPress={exportToPDF}
-          disabled={isExporting}
-        >
-          <Text style={styles.exportButtonText}>
-            {isExporting ? '⏳ Generating PDF...' : '📄 Export All as PDF'}
-          </Text>
-        </TouchableOpacity>
-      )}
-    </ScrollView>
-  );
+            {/* Progress Bar */}
+            <View style={styles.cardProgressContainer}>
+              <View
+                style={[
+                  styles.cardProgressBar,
+                  { width: `${(parseFloat(result.value) / 10) * 100}%` }
+                ]}
+              />
+            </View>
+
+            {/* Action Buttons */}
+            <View style={styles.cardActions}>
+              <TouchableOpacity
+                style={styles.detailsButton}
+                onPress={() => openResultDetails(result)}
+              >
+                <Text style={styles.detailsButtonText}>📋 Details</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.deleteCardButton}
+                onPress={() => deleteResult(result.id)}
+              >
+                <Text style={styles.deleteCardButtonText}>🗑️ Delete</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+      </View>
+    );
+
+    const renderEmpty = () => (
+      <View style={styles.emptyState}>
+        <Text style={styles.emptyStateText}>No saved results yet</Text>
+        <Text style={styles.emptyStateSubtext}>
+          Calculate your CGPA first and save the results to see them here.
+        </Text>
+      </View>
+    );
+
+    return (
+      <FlatList
+        data={tabResults}
+        renderItem={renderItem}
+        keyExtractor={item => item.id}
+        ListHeaderComponent={renderHeader}
+        ListFooterComponent={renderFooter}
+        ListEmptyComponent={renderEmpty}
+        contentContainerStyle={styles.tabContent}
+        showsVerticalScrollIndicator={false}
+      />
+    );
+  };
 
 
 
@@ -529,12 +587,15 @@ const Download = () => {
         <Animated.View
           style={[
             styles.slidingContent,
-            { transform: [{ translateX: slideXAnim }] }
+            {
+              transform: [{ translateX: slideXAnim }],
+              width: width * tabs.length
+            }
           ]}
         >
           {tabs.map((tab, index) => (
             <View key={tab.id} style={styles.tabPage}>
-              {renderMyResultsTab()}
+              {renderTabContent(tab.id)}
             </View>
           ))}
         </Animated.View>
@@ -680,11 +741,13 @@ const styles = StyleSheet.create({
   },
   tab: {
     paddingVertical: 15,
-    paddingHorizontal: 15,
+    paddingHorizontal: 20,
+    minWidth: 100,
+    justifyContent: 'center',
     alignItems: 'center',
     borderBottomWidth: 3,
     borderBottomColor: 'transparent',
-    marginRight: 5,
+    marginRight: 10,
   },
   activeTab: {
     borderBottomColor: '#87ceeb',
@@ -706,7 +769,6 @@ const styles = StyleSheet.create({
   slidingContent: {
     flex: 1,
     flexDirection: 'row',
-    width: width * 2,
   },
   tabPage: {
     width: width,
@@ -996,6 +1058,21 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: 'bold',
     letterSpacing: 0.5,
+  },
+  // Clear All Button Style
+  clearAllButton: {
+    margin: 20,
+    marginTop: 0,
+    padding: 15,
+    borderRadius: 8,
+    alignItems: 'center',
+    borderColor: '#f44336',
+    borderWidth: 1,
+  },
+  clearAllButtonText: {
+    color: '#f44336',
+    fontSize: 14,
+    fontWeight: 'bold',
   },
   // Section Headers
   sectionHeader: {

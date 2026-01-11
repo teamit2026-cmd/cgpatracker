@@ -1,5 +1,5 @@
 // fo.js - FIXED IMPORTS
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -59,13 +59,13 @@ const CGPAProgressChart = () => {
   const loadCurrentUserAndData = async () => {
     try {
       setLoading(true);
-      
+
       // Load current user first
       const user = await UserService.getCurrentUser();
       setCurrentUser(user);
-      
+
       if (user) {
-        await loadCGPAData(user.id);
+        await loadCGPAData(user.id, user.department);
       } else {
         // No user found - show empty data
         showEmptyData();
@@ -78,12 +78,12 @@ const CGPAProgressChart = () => {
     }
   };
 
-  const loadCGPAData = async (userId) => {
+  const loadCGPAData = async (userId, department) => {
     try {
       // Use ResultService to get results for chart (non-custom results only)
-      const results = await ResultService.getResultsForChart(userId);
+      const results = await ResultService.getResultsForChart(userId, department);
       const resultsArray = Array.from(results);
-      
+
       if (resultsArray.length > 0) {
         // Create array for 8 semesters with 0 for uncalculated ones
         const semesterData = Array.from({ length: 8 }, (_, index) => {
@@ -92,7 +92,7 @@ const CGPAProgressChart = () => {
           const semesterRecord = resultsArray.find(
             record => record.semester === semesterNum.toString() || record.semester === `Sem ${semesterNum}`
           );
-          
+
           return {
             semester: `Sem ${semesterNum}`,
             cgpa: semesterRecord ? parseFloat(semesterRecord.value) : 0,
@@ -100,9 +100,9 @@ const CGPAProgressChart = () => {
             record: semesterRecord || null
           };
         });
-        
+
         setCgpaData(semesterData);
-        
+
         // Calculate overall CGPA (only from semesters with data)
         const semestersWithData = semesterData.filter(sem => sem.hasData);
         if (semestersWithData.length > 0) {
@@ -137,14 +137,14 @@ const CGPAProgressChart = () => {
 
   // Calculate stats (only from semesters with data)
   const semestersWithData = cgpaData.filter(sem => sem.hasData);
-  const currentCGPA = semestersWithData.length > 0 
-    ? semestersWithData[semestersWithData.length - 1].cgpa 
+  const currentCGPA = semestersWithData.length > 0
+    ? semestersWithData[semestersWithData.length - 1].cgpa
     : 0;
-  const highestCGPA = semestersWithData.length > 0 
-    ? Math.max(...semestersWithData.map(d => d.cgpa)) 
+  const highestCGPA = semestersWithData.length > 0
+    ? Math.max(...semestersWithData.map(d => d.cgpa))
     : 0;
-  const lowestCGPA = semestersWithData.length > 0 
-    ? Math.min(...semestersWithData.map(d => d.cgpa)) 
+  const lowestCGPA = semestersWithData.length > 0
+    ? Math.min(...semestersWithData.map(d => d.cgpa))
     : 0;
 
   // Map CGPA to Y coordinate
@@ -224,7 +224,7 @@ const CGPAProgressChart = () => {
     }
   };
 
-  const { linePath, areaPath } = generateCurvePath();
+  const { linePath, areaPath } = useMemo(() => generateCurvePath(), [cgpaData]);
 
   if (loading) {
     return (
@@ -242,8 +242,8 @@ const CGPAProgressChart = () => {
       <StatusBar backgroundColor={COLORS.lightBlue} barStyle="dark-content" />
 
       <TouchableWithoutFeedback onPress={handleOutsideTap} accessible={false}>
-        <ScrollView 
-          style={styles.scrollContainer} 
+        <ScrollView
+          style={styles.scrollContainer}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
@@ -304,7 +304,7 @@ const CGPAProgressChart = () => {
                           <Stop offset="100%" stopColor={COLORS.primary} stopOpacity={0.05} />
                         </LinearGradient>
                       </Defs>
-                      
+
                       <Path d={areaPath} fill="url(#chartGradient)" />
                       <Path
                         d={linePath}
@@ -332,7 +332,7 @@ const CGPAProgressChart = () => {
                             disabled={!hasData}
                           >
                             <View style={[
-                              styles.dataPoint, 
+                              styles.dataPoint,
                               isSelected && styles.selectedDataPoint,
                               !hasData && styles.noDataPoint
                             ]} />
@@ -381,8 +381,8 @@ const CGPAProgressChart = () => {
                   {/* X-axis labels */}
                   <View style={styles.xAxisContainer}>
                     {cgpaData.map((data, index) => (
-                      <Text 
-                        key={index} 
+                      <Text
+                        key={index}
                         style={[
                           styles.xAxisLabel,
                           !data.hasData && styles.xAxisLabelNoData
@@ -720,7 +720,7 @@ const styles = StyleSheet.create({
     marginLeft: 8,
     fontStyle: 'italic',
   },
-    container: {
+  container: {
     flex: 1,
     backgroundColor: COLORS.lightBlue,
   },

@@ -145,6 +145,9 @@ export default function CGPACalculator({ navigation }) {
       const user = await UserService.getCurrentUser();
       if (user) {
         setCurrentUser(user);
+        if (user.department) {
+          setDepartment(user.department);
+        }
         setRealmReady(true);
       } else {
         Alert.alert(
