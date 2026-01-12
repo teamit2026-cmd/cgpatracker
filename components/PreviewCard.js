@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 
-export default function PreviewCard({ subject, onRemove }) {
+const PreviewCard = ({ subject, onRemove }) => {
   return (
     <View style={styles.previewCard}>
       <View style={styles.previewContent}>
@@ -9,13 +9,15 @@ export default function PreviewCard({ subject, onRemove }) {
         <Text style={styles.previewDetails}>{subject.code} • {subject.credits} credits</Text>
       </View>
       {onRemove ? (
-        <TouchableOpacity style={styles.removeButton} onPress={onRemove}>
+        <TouchableOpacity style={styles.removeButton} onPress={onRemove} activeOpacity={0.7}>
           <Text style={styles.removeButtonText}>X</Text>
         </TouchableOpacity>
       ) : null}
     </View>
   );
-}
+};
+
+export default memo(PreviewCard);
 
 const styles = StyleSheet.create({
   previewCard: {

@@ -19,6 +19,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 // Realm Services
 import UserService from './database/services/UserService';
+import HexonyxFooter from './components/HexonyxFooter';
 
 const { height: screenHeight } = Dimensions.get("window");
 
@@ -70,7 +71,7 @@ export default function ViewProfile() {
     try {
       setIsLoading(true);
       const user = await UserService.getCurrentUser();
-      
+
       if (user) {
         // User exists in Realm
         setUserProfile({
@@ -82,8 +83,8 @@ export default function ViewProfile() {
         });
         setCurrentUserId(user.id);
       } else {
-        // No user exists, create a default one with VALID values
-        await createDefaultUser();
+        // No user exists, keep state empty
+        setCurrentUserId(null);
       }
     } catch (error) {
       console.log("❌ Error loading user profile from Realm:", error);
@@ -93,27 +94,7 @@ export default function ViewProfile() {
     }
   };
 
-  // 🚨 FIXED: Create default user with valid values
-  const createDefaultUser = async () => {
-    try {
-      const defaultUser = {
-        name: "New User",
-        regNo: "000000",
-        department: "IT", // Use department codes that match your CGPA calculator
-        year: "I",
-        email: "user@example.com",
-        isActive: true
-      };
-      console.log("🔄 Creating default user:", defaultUser);
-      const savedUser = await UserService.saveUser(defaultUser);
-      setUserProfile(defaultUser);
-      setCurrentUserId(savedUser.id);
-      console.log("✅ Default user created successfully");
-    } catch (error) {
-      console.log("❌ Error creating default user:", error);
-      showToast("Error creating profile: " + error.message, "error");
-    }
-  };
+
 
   // Whenever userProfile changes, update editProfile state
   useEffect(() => {
@@ -138,7 +119,7 @@ export default function ViewProfile() {
         if (!value.trim()) newErrors.regNo = "Registration number is required";
         else if (!validateRegistrationNumber(value))
           newErrors.regNo = "Registration number can only contain digits";
-        else if (value.length < 4) newErrors.regNo = "Registration number must be at least 4 digits";
+        else if (value.length < 10) newErrors.regNo = "Registration number must be at least 10 digits";
         else if (value.length > 12) newErrors.regNo = "Registration number cannot exceed 12 digits";
         else newErrors.regNo = "";
         break;
@@ -208,7 +189,7 @@ export default function ViewProfile() {
     try {
       // Get current user to update
       const currentUser = await UserService.getCurrentUser();
-      
+
       if (currentUser) {
         // UPDATE existing user
         console.log("🔄 Updating user profile:", editProfile);
@@ -396,40 +377,44 @@ export default function ViewProfile() {
       <FlatList
         data={[]}
         ListHeaderComponent={() => (
-          <View style={styles.profileContainer}>
-            <View style={styles.header}>
-              <View style={styles.headerIconContainer}>
-                <Ionicons name="person" size={16} color="#ffffff" />
+          <>
+            <View style={styles.profileContainer}>
+              <View style={styles.header}>
+                <View style={styles.headerIconContainer}>
+                  <Ionicons name="person" size={16} color="#ffffff" />
+                </View>
+                <Text style={styles.headerTitle}>Basic User Details</Text>
               </View>
-              <Text style={styles.headerTitle}>Basic User Details</Text>
+              <View style={styles.detailsContainer}>
+                <View style={styles.detailRow}>
+                  <Text style={styles.profileLabel}>Name:</Text>
+                  <Text style={styles.value}>{userProfile.name || "Not set"}</Text>
+                </View>
+                <View style={styles.detailRow}>
+                  <Text style={styles.profileLabel}>Reg No:</Text>
+                  <Text style={styles.value}>{userProfile.regNo || "Not set"}</Text>
+                </View>
+                <View style={styles.detailRow}>
+                  <Text style={styles.profileLabel}>Email:</Text>
+                  <Text style={styles.value}>{userProfile.email || "Not set"}</Text>
+                </View>
+                <View style={styles.detailRow}>
+                  <Text style={styles.profileLabel}>Department:</Text>
+                  <Text style={styles.value}>{userProfile.department || "Not set"}</Text>
+                </View>
+                <View style={[styles.detailRow, styles.lastRow]}>
+                  <Text style={styles.profileLabel}>Year:</Text>
+                  <Text style={styles.value}>{userProfile.year || "Not set"}</Text>
+                </View>
+              </View>
+              <TouchableOpacity style={styles.updateButton} onPress={handleUpdateProfile}>
+                <Ionicons name="create-outline" size={20} color="#ffffff" style={styles.buttonIcon} />
+                <Text style={styles.updateButtonText}>Update Profile</Text>
+              </TouchableOpacity>
             </View>
-            <View style={styles.detailsContainer}>
-              <View style={styles.detailRow}>
-                <Text style={styles.profileLabel}>Name:</Text>
-                <Text style={styles.value}>{userProfile.name || "Not set"}</Text>
-              </View>
-              <View style={styles.detailRow}>
-                <Text style={styles.profileLabel}>Reg No:</Text>
-                <Text style={styles.value}>{userProfile.regNo || "Not set"}</Text>
-              </View>
-              <View style={styles.detailRow}>
-                <Text style={styles.profileLabel}>Email:</Text>
-                <Text style={styles.value}>{userProfile.email || "Not set"}</Text>
-              </View>
-              <View style={styles.detailRow}>
-                <Text style={styles.profileLabel}>Department:</Text>
-                <Text style={styles.value}>{userProfile.department || "Not set"}</Text>
-              </View>
-              <View style={[styles.detailRow, styles.lastRow]}>
-                <Text style={styles.profileLabel}>Year:</Text>
-                <Text style={styles.value}>{userProfile.year || "Not set"}</Text>
-              </View>
-            </View>
-            <TouchableOpacity style={styles.updateButton} onPress={handleUpdateProfile}>
-              <Ionicons name="create-outline" size={20} color="#ffffff" style={styles.buttonIcon} />
-              <Text style={styles.updateButtonText}>Update Profile</Text>
-            </TouchableOpacity>
-          </View>
+            <View style={{ height: 100 }} />
+            <HexonyxFooter />
+          </>
         )}
         keyExtractor={() => "main-content"}
         showsVerticalScrollIndicator={false}

@@ -1,16 +1,88 @@
 import React from 'react';
-import { StyleSheet, Text, View, ScrollView, TouchableOpacity } from 'react-native';
+import { StyleSheet, Text, View, ScrollView, TouchableOpacity, Alert, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
+import { MaterialIcons } from '@expo/vector-icons';
+
+const teamMembers = [
+  {
+    name: 'Dhanush',
+    role: 'Team Lead & Developer',
+    linkedin: 'https://linkedin.com/in/dhanush',
+    github: 'https://github.com/dhanush',
+    color: '#0077B5',
+  },
+  {
+    name: 'Keerthikeshan',
+    role: 'Web Designer & Developer',
+    linkedin: 'https://linkedin.com/in/keerthikeshan',
+    github: 'https://github.com/keerthikeshan',
+    color: '#00A67E',
+  },
+  {
+    name: 'Barath',
+    role: 'Testing & Developer',
+    linkedin: 'https://linkedin.com/in/barath',
+    github: 'https://github.com/barath',
+    color: '#FF6B6B',
+  },
+  {
+    name: 'Loguesvaran',
+    role: 'Logic & Developer',
+    linkedin: 'https://linkedin.com/in/loguesvaran',
+    github: 'https://github.com/loguesvaran',
+    color: '#4ECDC4',
+  },
+  {
+    name: 'Krishnarajan',
+    role: 'Data Analysis & Developer',
+    linkedin: 'https://linkedin.com/in/krishnarajan',
+    github: 'https://github.com/krishnarajan',
+    color: '#95E1D3',
+  },
+];
 
 export default function AboutCGPATracker() {
   const navigation = useNavigation();
 
+  const handleSocialLink = (platform, url, name) => {
+    Alert.alert(
+      'Open External Link',
+      `You are about to be redirected to ${name}'s ${platform} profile. Do you want to continue?`,
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'OK',
+          onPress: () => {
+            Linking.openURL(url).catch(() => {
+              Alert.alert('Error', 'Unable to open the link');
+            });
+          },
+        },
+      ]
+    );
+  };
+
+  const getInitials = (name) => {
+    return name
+      .split(' ')
+      .map((n) => n[0])
+      .join('')
+      .toUpperCase()
+      .substring(0, 2);
+  };
+
   return (
     <SafeAreaView style={styles.safeArea}>
-      {/* Navigation Bar with bottom shadow only */}
-      <View style={styles.navBar}>
-        <Text style={styles.titleHeaderText}>About CGPA Tracker</Text>
+      {/* Navigation Bar - Syllabus Style */}
+      <View style={styles.appBar}>
+        <View style={styles.appBarTitleContainer}>
+          <MaterialIcons name="info" size={20} color="#00d0ffff" />
+          <Text style={styles.appBarTitle}>About CGPA Tracker</Text>
+        </View>
       </View>
 
       <ScrollView contentContainerStyle={styles.container}>
@@ -55,32 +127,38 @@ export default function AboutCGPATracker() {
           </View>
         </View>
 
-        <Text style={styles.sectionTitle}>Meet the Team</Text>
+        <Text style={styles.teamSectionTitle}>Meet the Hexonyx Team</Text>
 
-        <View style={styles.teamBox}>
-          <Text style={styles.teamRole}>Team Lead</Text>
-          <Text style={styles.teamDesc}>Dhanush</Text>
-        </View>
-
-        <View style={styles.teamBox}>
-          <Text style={styles.teamRole}>Web Designer & Developer</Text>
-          <Text style={styles.teamDesc}>Keerthikeshan</Text>
-        </View>
-
-        <View style={styles.teamBox}>
-          <Text style={styles.teamRole}>Testing & Developer</Text>
-          <Text style={styles.teamDesc}>Barath</Text>
-        </View>
-
-        <View style={styles.teamBox}>
-          <Text style={styles.teamRole}>Logic & Developer</Text>
-          <Text style={styles.teamDesc}>Loguesvaran</Text>
-        </View>
-
-        <View style={styles.teamBox}>
-          <Text style={styles.teamRole}>Data Analysis & Developer</Text>
-          <Text style={styles.teamDesc}>Krishnarajan</Text>
-        </View>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.teamScrollContainer}
+          style={styles.teamScrollView}
+        >
+          {teamMembers.map((member, index) => (
+            <View key={index} style={styles.teamBox}>
+              <View style={[styles.avatar, { backgroundColor: member.color }]}>
+                <Text style={styles.avatarText}>{getInitials(member.name)}</Text>
+              </View>
+              <Text style={styles.teamRole}>{member.role}</Text>
+              <Text style={styles.teamName}>{member.name}</Text>
+              <View style={styles.socialIcons}>
+                <TouchableOpacity
+                  style={[styles.iconButton, { backgroundColor: '#0077B5' }]}
+                  onPress={() => handleSocialLink('LinkedIn', member.linkedin, member.name)}
+                >
+                  <MaterialIcons name="link" size={20} color="#fff" />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.iconButton, { backgroundColor: '#333' }]}
+                  onPress={() => handleSocialLink('GitHub', member.github, member.name)}
+                >
+                  <MaterialIcons name="code" size={20} color="#fff" />
+                </TouchableOpacity>
+              </View>
+            </View>
+          ))}
+        </ScrollView>
 
         <View style={styles.ctaBox}>
           <Text style={styles.ctaTitle}>Ready to Calculate Your CGPA?</Text>
@@ -102,27 +180,25 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#BEDFFA',
   },
-  navBar: {
+  appBar: {
+    height: 56,
+    backgroundColor: '#ffffff',
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    height: 50,
-    backgroundColor: '#fff',
-    shadowColor: '#232867',
-    shadowOpacity: 0.15,
-    shadowOffset: { width: 0, height: 6 },
-    shadowRadius: 7,
-    elevation: 10,
-    zIndex: 1,
-    marginTop: 0,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
   },
-  titleHeaderText: {
+  appBarTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  appBarTitle: {
+    marginLeft: 8,
+    fontSize: 20,
+    fontWeight: '700',
     color: '#232867',
-    fontSize: 18,
-    fontWeight: '800',
-    letterSpacing: 1,
-    marginTop: 5,
-    marginBottom: 4,
-    textAlign: 'center',
   },
   container: {
     padding: 14,
@@ -207,35 +283,77 @@ const styles = StyleSheet.create({
     color: '#333',
     lineHeight: 18,
   },
+  teamSectionTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#232867',
+    textAlign: 'center',
+    marginBottom: 16,
+    marginTop: 10,
+  },
+  teamScrollView: {
+    marginBottom: 20,
+  },
+  teamScrollContainer: {
+    paddingRight: 14,
+  },
   teamBox: {
     backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 14,
-    marginBottom: 10,
+    width: 160,
+    borderRadius: 20,
+    padding: 16,
+    marginRight: 12,
     alignItems: 'center',
     shadowColor: '#232867',
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 3,
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 5,
+  },
+  avatar: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  avatarText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: 'bold',
   },
   teamRole: {
     color: '#232867',
     fontWeight: '700',
-    fontSize: 16,
-    marginBottom: 2,
+    fontSize: 14,
+    marginBottom: 4,
     textAlign: 'center',
   },
-  teamDesc: {
-    fontSize: 14,
-    color: '#333',
+  teamName: {
+    fontSize: 13,
+    color: '#555',
+    marginBottom: 10,
     textAlign: 'center',
+  },
+  socialIcons: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  iconButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#f5f5f5',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   ctaBox: {
     backgroundColor: '#232867',
     borderRadius: 12,
     padding: 20,
     alignItems: 'center',
+    marginTop: 10,
   },
   ctaTitle: {
     color: '#fff',

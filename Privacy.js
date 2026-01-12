@@ -1,12 +1,16 @@
 import React from 'react';
 import { StyleSheet, Text, View, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { MaterialIcons } from '@expo/vector-icons';
 
 export default function PrivacyPolicy() {
   return (
     <SafeAreaView style={styles.safeArea}>
-      <View style={styles.navBar}>
-        <Text style={styles.titleHeaderText}>Privacy Policy</Text>
+      <View style={styles.appBar}>
+        <View style={styles.appBarTitleContainer}>
+          <MaterialIcons name="privacy-tip" size={20} color="#00d0ffff" />
+          <Text style={styles.appBarTitle}>Privacy Policy</Text>
+        </View>
       </View>
 
       <ScrollView contentContainerStyle={styles.container}>
@@ -49,22 +53,25 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#BEDFFA',
   },
-  navBar: {
-    height: 50,
-    backgroundColor: '#fff',
-    justifyContent: 'center',
+  appBar: {
+    height: 56,
+    backgroundColor: '#ffffff',
+    flexDirection: 'row',
     alignItems: 'center',
-    shadowColor: '#232867',
-    shadowOpacity: 0.15,
-    shadowOffset: { width: 0, height: 6 },
-    shadowRadius: 7,
-    elevation: 10,
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
   },
-  titleHeaderText: {
-    fontSize: 18,
-    fontWeight: '800',
+  appBarTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  appBarTitle: {
+    marginLeft: 8,
+    fontSize: 20,
+    fontWeight: '700',
     color: '#232867',
-    letterSpacing: 1,
   },
   container: {
     padding: 16,

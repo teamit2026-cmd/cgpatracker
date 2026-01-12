@@ -13,8 +13,9 @@ import { useNavigation } from '@react-navigation/native'; // Add this import
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
-const SplashScreen = ({ onAnimationComplete }) => {
-  const navigation = useNavigation(); // Add navigation hook
+const SplashScreen = ({ onAnimationComplete, isDatabaseReady }) => {
+  const navigation = useNavigation();
+  const [animationDone, setAnimationDone] = useState(false);
 
   // Animation values
   const containerOpacity = useRef(new Animated.Value(0)).current;
@@ -37,6 +38,12 @@ const SplashScreen = ({ onAnimationComplete }) => {
 
   // Glow animation
   const glowAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (animationDone && isDatabaseReady) {
+      navigation.replace('Dashboard');
+    }
+  }, [animationDone, isDatabaseReady]);
 
   useEffect(() => {
     startAnimation();
@@ -131,12 +138,10 @@ const SplashScreen = ({ onAnimationComplete }) => {
           useNativeDriver: true,
         }),
       ]).start(() => {
-        // Call the callback if provided
         if (onAnimationComplete) {
           onAnimationComplete();
         }
-        // Navigate to Dashboard after animation completes (bypassing Auth for now)
-        navigation.replace('Dashboard');
+        setAnimationDone(true);
       });
     }, 4500);
   };

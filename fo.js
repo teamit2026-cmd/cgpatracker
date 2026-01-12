@@ -17,6 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { Picker } from '@react-native-picker/picker';
+import HexonyxFooter from './components/HexonyxFooter';
 
 // CORRECT PATHS
 import ResultService from './database/services/ResultService';
@@ -253,12 +254,18 @@ const CGPAProgressChart = () => {
     <SafeAreaView style={styles.container}>
       <StatusBar backgroundColor={COLORS.lightBlue} barStyle="dark-content" />
 
-      <TouchableWithoutFeedback onPress={handleOutsideTap} accessible={false}>
-        <ScrollView
-          style={styles.scrollContainer}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
+      <ScrollView
+        style={styles.scrollContainer}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        onScroll={handleOutsideTap}
+        scrollEventThrottle={16}
+      >
+        <TouchableOpacity
+          activeOpacity={1}
+          onPress={handleOutsideTap}
+          style={styles.scrollContentWrapper}
         >
           <View style={styles.centeredContent}>
             {/* Department Filter */}
@@ -350,13 +357,25 @@ const CGPAProgressChart = () => {
                       const isSelected = selectedDot === index;
                       const hasData = data.hasData;
 
+                      // Calculate touch area width to prevent overlap
+                      const touchWidth = Math.min(40, pointSpacing);
+
                       return (
-                        <View key={index} style={styles.pointWrapper} pointerEvents="box-none">
+                        <View key={index} style={{ position: 'absolute' }}>
                           <TouchableOpacity
-                            style={[styles.dataPointContainer, { left: x - 8, top: y - 8 }]}
+                            style={[
+                              styles.dataPointContainer,
+                              {
+                                left: x - touchWidth / 2,
+                                top: y - 20,
+                                width: touchWidth,
+                                height: 40
+                              }
+                            ]}
                             onPress={() => handleDotPress(index)}
                             activeOpacity={hasData ? 0.7 : 1}
                             disabled={!hasData}
+                            hitSlop={{ top: 10, bottom: 10, left: 5, right: 5 }}
                           >
                             <View style={[
                               styles.dataPoint,
@@ -451,6 +470,7 @@ const CGPAProgressChart = () => {
             </View>
 
             {/* Data Source Info */}
+            <View style={{ height: 15 }} />
             {semestersWithData.length > 0 && (
               <View style={styles.infoCard}>
                 <Ionicons name="information-circle-outline" size={16} color={COLORS.primaryLight} />
@@ -459,9 +479,11 @@ const CGPAProgressChart = () => {
                 </Text>
               </View>
             )}
+            <View style={{ height: 15 }} />
+            <HexonyxFooter />
           </View>
-        </ScrollView>
-      </TouchableWithoutFeedback>
+        </TouchableOpacity>
+      </ScrollView>
     </SafeAreaView>
   );
 };
@@ -499,6 +521,9 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingBottom: 0,
   },
+  scrollContentWrapper: {
+    flex: 1,
+  },
   pickerWrapper: {
     backgroundColor: '#f6f7fb',
     borderRadius: 12,
@@ -521,8 +546,8 @@ const styles = StyleSheet.create({
   chartCard: {
     backgroundColor: '#ffffff',
     borderRadius: 16,
-    padding: 15,
-    marginBottom: 10,
+    padding: 20,
+    marginBottom: 15,
     elevation: 3,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -533,12 +558,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 20,
-    paddingBottom: 10,
+    paddingBottom: 15,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.lightBlue,
   },
   headerTitle: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '600',
     color: COLORS.primaryDark,
     marginLeft: 8,
@@ -566,7 +591,7 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
   },
   chartArea: {
-    height: 220,
+    height: 240,
     flexDirection: 'row',
     position: 'relative',
   },
@@ -587,9 +612,9 @@ const styles = StyleSheet.create({
   chartContainer: {
     flex: 1,
     height: CHART_HEIGHT,
-    marginLeft: 8,
+    marginLeft: 12,
     marginTop: 15,
-    marginRight: 8,
+    marginRight: 10,
     position: 'relative',
   },
   gridLine: {
@@ -610,8 +635,6 @@ const styles = StyleSheet.create({
   },
   dataPointContainer: {
     position: 'absolute',
-    width: 16,
-    height: 16,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -747,7 +770,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   statValue: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: 'bold',
     color: COLORS.primaryDark,
     marginBottom: 2,
@@ -771,257 +794,6 @@ const styles = StyleSheet.create({
     color: COLORS.primaryLight,
     marginLeft: 8,
     fontStyle: 'italic',
-  },
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.lightBlue,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingText: {
-    marginTop: 16,
-    fontSize: 16,
-    color: COLORS.primaryDark,
-    fontWeight: '500',
-  },
-  scrollContainer: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingVertical: 10,
-  },
-  centeredContent: {
-    paddingHorizontal: 20,
-  },
-  chartCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 20,
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-  },
-  chartHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 30,
-    paddingBottom: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.lightBlue,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: COLORS.primaryDark,
-    marginLeft: 8,
-  },
-  noDataContainer: {
-    alignItems: 'center',
-    paddingVertical: 60,
-  },
-  noDataText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: COLORS.primaryDark,
-    marginTop: 16,
-  },
-  noDataSubtext: {
-    fontSize: 14,
-    color: COLORS.primaryLight,
-    marginTop: 8,
-    textAlign: 'center',
-  },
-  chartArea: {
-    height: 260,
-    flexDirection: 'row',
-    position: 'relative',
-  },
-  yAxisContainer: {
-    width: 40,
-    height: CHART_HEIGHT,
-    justifyContent: 'space-between',
-    alignItems: 'flex-end',
-    paddingRight: 8,
-    marginTop: 20,
-  },
-  yAxisLabel: {
-    fontSize: 12,
-    color: COLORS.primaryLight,
-    fontWeight: '500',
-    textAlign: 'right',
-  },
-  chartContainer: {
-    flex: 1,
-    height: CHART_HEIGHT,
-    marginLeft: 12,
-    marginTop: 20,
-    marginRight: 10,
-    position: 'relative',
-  },
-  gridLine: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    height: 1,
-    backgroundColor: COLORS.lightBlue,
-  },
-  svgChart: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-  },
-  pointWrapper: {
-    position: 'absolute',
-    zIndex: 10,
-  },
-  dataPointContainer: {
-    position: 'absolute',
-    width: 16,
-    height: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  dataPoint: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: COLORS.primary,
-    borderWidth: 2,
-    borderColor: '#ffffff',
-    elevation: 3,
-    shadowColor: COLORS.primary,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.3,
-    shadowRadius: 2,
-  },
-  noDataPoint: {
-    backgroundColor: COLORS.lightBlueHover,
-    borderColor: COLORS.lightBlue,
-    opacity: 0.5,
-  },
-  selectedDataPoint: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: COLORS.primaryDark,
-    borderWidth: 3,
-    borderColor: '#ffffff',
-    elevation: 5,
-  },
-  tooltipContainer: {
-    position: 'absolute',
-    alignItems: 'center',
-    zIndex: 1000,
-  },
-  tooltip: {
-    backgroundColor: COLORS.primaryDark,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
-    alignItems: 'center',
-    elevation: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-  },
-  tooltipSemester: {
-    fontSize: 11,
-    color: COLORS.secondary,
-    fontWeight: '500',
-    marginBottom: 2,
-  },
-  tooltipCGPA: {
-    fontSize: 13,
-    color: '#ffffff',
-    fontWeight: 'bold',
-  },
-  xAxisContainer: {
-    position: 'absolute',
-    bottom: 5,
-    left: 52,
-    right: 10,
-    height: 25,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  xAxisLabel: {
-    fontSize: 11,
-    color: COLORS.primaryLight,
-    fontWeight: '500',
-    textAlign: 'center',
-    flex: 1,
-    includeFontPadding: false,
-    paddingVertical: 0,
-    marginVertical: 0,
-  },
-  xAxisLabelNoData: {
-    opacity: 0.4,
-  },
-  averageCGPACard: {
-    backgroundColor: COLORS.primary,
-    borderRadius: 16,
-    padding: 16,
-    alignItems: 'center',
-    marginBottom: 12,
-    elevation: 4,
-    shadowColor: COLORS.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-  },
-  averageCGPALabel: {
-    fontSize: 16,
-    color: '#ffffff',
-    fontWeight: '500',
-    marginBottom: 4,
-  },
-  averageCGPAValue: {
-    fontSize: 36,
-    color: '#ffffff',
-    fontWeight: 'bold',
-  },
-  averageCGPASubtext: {
-    fontSize: 12,
-    color: COLORS.secondary,
-    marginTop: 4,
-    fontWeight: '500',
-  },
-  statsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    backgroundColor: '#ffffff',
-    paddingVertical: 16,
-    paddingHorizontal: 12,
-    borderRadius: 16,
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    marginBottom: 12,
-  },
-  statItem: {
-    alignItems: 'center',
-    flex: 1,
-  },
-  statValue: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: COLORS.primaryDark,
-    marginBottom: 2,
-  },
-  statLabel: {
-    fontSize: 12,
-    color: COLORS.primaryLight,
-    fontWeight: '500',
   },
 });
 

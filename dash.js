@@ -19,6 +19,7 @@ import { Ionicons, MaterialIcons, Entypo } from '@expo/vector-icons';
 import Constants from 'expo-constants';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
+import HexonyxFooter from './components/HexonyxFooter';
 
 const { width, height } = Dimensions.get('window');
 const CARD_WIDTH = width * 0.55;
@@ -28,8 +29,8 @@ const DEVELOPER_MESSAGES = [
     name: 'Loguesvaran',
     role: 'Tech Innovator',
     message: 'Dedicated to providing the best tracking experience for PKIETians.',
-    color: '#FF6B35', // Orange
-    gradient: ['#FF6B35', '#FF8C42'],
+    color: '#232867',
+    gradient: ['#ffffff', '#e3f2fd'],
     avatar: '👨‍💻',
     rating: 5,
   },
@@ -37,8 +38,8 @@ const DEVELOPER_MESSAGES = [
     name: 'Dhanush',
     role: 'Lead Architect',
     message: 'Focusing on clean code and accurate calculations for every department.',
-    color: '#00B4D8', // Cyan
-    gradient: ['#00B4D8', '#0096C7'],
+    color: '#232867',
+    gradient: ['#ffffff', '#e3f2fd'],
     avatar: '🚀',
     rating: 5,
   },
@@ -46,8 +47,8 @@ const DEVELOPER_MESSAGES = [
     name: 'Keerthikeshan',
     role: 'Backend Architect',
     message: 'We aim to make academic progress tracking seamless and efficient.',
-    color: '#FFD166', // Yellow
-    gradient: ['#FFD166', '#FFC233'],
+    color: '#232867',
+    gradient: ['#ffffff', '#e3f2fd'],
     avatar: '🎨',
     rating: 5,
   },
@@ -55,8 +56,8 @@ const DEVELOPER_MESSAGES = [
     name: 'Krishnarajan',
     role: 'UI/UX Designer',
     message: 'Innovation in education through technology is our core mission.',
-    color: '#06D6A0', // Green
-    gradient: ['#06D6A0', '#05B48C'],
+    color: '#232867',
+    gradient: ['#ffffff', '#e3f2fd'],
     avatar: '💡',
     rating: 5,
   },
@@ -64,8 +65,8 @@ const DEVELOPER_MESSAGES = [
     name: 'Barath',
     role: 'Logic Specialist',
     message: 'Helping students stay ahead with real-time GCPA insights.',
-    color: '#EF476F', // Pink
-    gradient: ['#EF476F', '#F25C7C'],
+    color: '#232867',
+    gradient: ['#ffffff', '#e3f2fd'],
     avatar: '📊',
     rating: 5,
   },
@@ -204,6 +205,7 @@ const Dashboard = ({ navigation }) => {
       </View>
     );
   };
+
 
   return (
     <View style={styles.container}>
@@ -400,14 +402,14 @@ const Dashboard = ({ navigation }) => {
                           <MaterialIcons
                             name="format-quote"
                             size={28}
-                            color="rgba(255, 255, 255, 0.3)"
+                            color="rgba(35, 40, 103, 0.15)"
                             style={styles.quoteIconTop}
                           />
                           <Text style={styles.reviewText}>{msg.message}</Text>
                           <MaterialIcons
                             name="format-quote"
                             size={28}
-                            color="rgba(255, 255, 255, 0.3)"
+                            color="rgba(35, 40, 103, 0.15)"
                             style={styles.quoteIconBottom}
                           />
                         </View>
@@ -419,6 +421,7 @@ const Dashboard = ({ navigation }) => {
             </ScrollView>
           </View>
         </View>
+        <HexonyxFooter />
       </View>
 
       {/* Menu Modal */}
@@ -737,7 +740,7 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: 'rgba(100, 181, 246, 0.1)',
     top: -30,
     right: -30,
   },
@@ -746,7 +749,7 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    backgroundColor: 'rgba(35, 40, 103, 0.05)',
     bottom: -15,
     left: -15,
   },
@@ -780,24 +783,21 @@ const styles = StyleSheet.create({
   developerName: {
     fontSize: 13,
     fontWeight: '800',
-    color: '#fff',
-    textShadowColor: 'rgba(0, 0, 0, 0.2)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
+    color: '#232867',
   },
   developerRole: {
     fontSize: 10,
     fontWeight: '600',
-    color: 'rgba(255, 255, 255, 0.85)',
+    color: '#64748b',
     marginTop: 1,
   },
   messageContainer: {
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    backgroundColor: 'rgba(100, 181, 246, 0.08)',
     borderRadius: 10,
     padding: 10,
     marginBottom: 0,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.25)',
+    borderColor: 'rgba(100, 181, 246, 0.2)',
     zIndex: 2,
   },
   quoteIconTop: {
@@ -812,7 +812,7 @@ const styles = StyleSheet.create({
     transform: [{ rotate: '180deg' }],
   },
   reviewText: {
-    color: '#fff',
+    color: '#232867',
     fontSize: 12,
     lineHeight: 18,
     textAlign: 'center',
@@ -820,8 +820,5 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     paddingHorizontal: 14,
     paddingVertical: 6,
-    textShadowColor: 'rgba(0, 0, 0, 0.15)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
   },
 });

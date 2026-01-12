@@ -8,8 +8,6 @@ import RealmDB from './database/RealmDB';
 
 // Screens
 import SplashScreen from './screens/SplashScreen';
-import AuthScreen from './screens/AuthScreen';
-import OtpScreen from './screens/OtpScreen';
 import Dashboard from './dash';
 import About from './about';
 import Feedback from './feedback';
@@ -24,35 +22,6 @@ import Privacy from './Privacy';
 import Syllabus from './Syllabus';
 
 const Stack = createStackNavigator();
-
-// Database Loading Component
-const DatabaseLoader = () => (
-  <View style={{
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#1a1a2e'
-  }}>
-    <ActivityIndicator size="large" color="#64b5f6" />
-    <Text style={{
-      marginTop: 20,
-      color: '#ffffff',
-      fontSize: 16,
-      fontWeight: '600'
-    }}>
-      Initializing Database...
-    </Text>
-    <Text style={{
-      marginTop: 10,
-      color: '#b3e5fc',
-      fontSize: 14,
-      textAlign: 'center',
-      paddingHorizontal: 40
-    }}>
-      Setting up your CGPA Tracker
-    </Text>
-  </View>
-);
 
 // Database Error Component
 const DatabaseError = ({ error }) => (
@@ -124,17 +93,12 @@ function App() {
     };
   }, []);
 
-  // Show loading screen while initializing database
-  if (!databaseState.isReady && !databaseState.error) {
-    return <DatabaseLoader />;
-  }
-
-  // Show error screen if database initialization failed
+  // Show error screen if database initialization failed (non-Splash)
   if (databaseState.error) {
     return <DatabaseError error={databaseState.error} />;
   }
 
-  // Main app navigation - Direct to Dashboard
+  // Always return the navigator. SplashScreen will handle the "wait" time.
   return (
     <NavigationContainer>
       <Stack.Navigator
@@ -145,7 +109,10 @@ function App() {
           animationEnabled: true,
         }}
       >
-        {/* Dashboard - First screen user sees (bypassing auth for now) */}
+        <Stack.Screen name="Splash">
+          {(props) => <SplashScreen {...props} isDatabaseReady={databaseState.isReady} />}
+        </Stack.Screen>
+
         <Stack.Screen
           name="Dashboard"
           component={Dashboard}
@@ -154,25 +121,7 @@ function App() {
           }}
         />
 
-        {/* Splash Screen - Still available but not initial */}
-        <Stack.Screen
-          name="Splash"
-          component={SplashScreen}
-          options={{
-            animationTypeForReplace: 'pop',
-          }}
-        />
 
-        {/* Authentication Flow - Available but not initial */}
-        <Stack.Screen
-          name="Auth"
-          component={AuthScreen}
-        />
-
-        <Stack.Screen
-          name="OtpScreen"
-          component={OtpScreen}
-        />
 
         {/* Academic Features */}
         <Stack.Screen

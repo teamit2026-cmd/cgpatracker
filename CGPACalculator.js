@@ -261,8 +261,15 @@ export default function CGPACalculator({ navigation }) {
   };
 
   const handleCalculate = async () => {
-    if (!currentUser) {
-      showSnackbar('Please set up your profile first');
+    if (!currentUser || !currentUser.name) {
+      Alert.alert(
+        'Profile Required',
+        'Please set up your profile first to use the CGPA Calculator.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Set up Profile', onPress: () => navigation.navigate('ViewProfile') }
+        ]
+      );
       return;
     }
 

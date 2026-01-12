@@ -1,9 +1,9 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
-export default function SubjectCard({ subject, selectedGrade, onGradeChange, gradeOptions = ['S', 'A', 'B', 'C', 'D', 'E', 'F'] }) {
+const SubjectCard = ({ subject, selectedGrade, onGradeChange, gradeOptions = ['S', 'A', 'B', 'C', 'D', 'E', 'F'] }) => {
   if (!subject) return null;
 
   return (
@@ -31,7 +31,9 @@ export default function SubjectCard({ subject, selectedGrade, onGradeChange, gra
       </View>
     </View>
   );
-}
+};
+
+export default memo(SubjectCard);
 
 const styles = StyleSheet.create({
   subjectCard: {

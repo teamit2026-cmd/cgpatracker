@@ -1,5 +1,5 @@
 // components/CustomSubject.js - UPDATED VERSION
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -13,9 +13,12 @@ import {
   Dimensions,
   KeyboardAvoidingView,
   Platform,
+  Keyboard,
 } from 'react-native';
-import { FontAwesome5 } from '@expo/vector-icons';
+import { FontAwesome5, Ionicons } from '@expo/vector-icons';
+import { Picker } from '@react-native-picker/picker';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { departmentSubjectsCredits } from './data/DepartmentData';
 import CustomSubjectService from './database/services/CustomSubjectService';
 import ResultService from './database/services/ResultService';
 import UserService from './database/services/UserService';
@@ -41,9 +44,13 @@ export default function CombinedCGPATracker({ navigation }) {
   const [currentSemester, setCurrentSemester] = useState('Custom');
   const [currentDepartment, setCurrentDepartment] = useState('Custom');
 
+  // Multi-select for pre-filling subjects
+  const [selectedDept, setSelectedDept] = useState('CSE');
+  const [selectedSem, setSelectedSem] = useState(1);
+
   // Use same grade scale & UI as CGPA Calculator (S, A, B, C, D, E, F)
   // Standard Grade Scale (S, A, B, C, D, E, F)
-  const gradePoints = {
+  const gradePoints = useMemo(() => ({
     S: 10,
     A: 9,
     B: 8,
@@ -51,13 +58,13 @@ export default function CombinedCGPATracker({ navigation }) {
     D: 6,
     E: 5,
     F: 0,
-  };
+  }), []);
 
   useEffect(() => {
     loadCurrentUser();
   }, []);
 
-  const loadCurrentUser = async () => {
+  const loadCurrentUser = useCallback(async () => {
     try {
       const user = await UserService.getCurrentUser();
       setCurrentUser(user);
@@ -67,62 +74,124 @@ export default function CombinedCGPATracker({ navigation }) {
     } catch (error) {
       console.error('Error loading current user:', error);
     }
-  };
+  }, []);
 
   // Add subject function
-  const addSubject = () => {
-    if (!currentSubject.name || !currentSubject.code || !currentSubject.credits) {
-      Alert.alert('Error', 'Please fill all fields');
+  const addSubject = useCallback(() => {
+    if (!currentSubject.name || !currentSubject.credits) {
+      Alert.alert('Error', 'Please fill at least Subject Name and Credits');
       return;
     }
-    if (isNaN(currentSubject.credits) || parseFloat(currentSubject.credits) <= 0) {
-      Alert.alert('Error', 'Credits must be a valid positive number');
+    const creditsNum = parseInt(currentSubject.credits, 10);
+    if (isNaN(creditsNum) || creditsNum <= 0) {
+      Alert.alert('Error', 'Credits must be a valid positive integer');
       return;
     }
+    const timestamp = Date.now().toString();
     const newSubject = {
-      id: Date.now().toString(),
-      name: currentSubject.name,
-      code: currentSubject.code || `CUST-${Date.now()}`,
-      credits: parseFloat(currentSubject.credits),
+      id: timestamp,
+      name: currentSubject.name.trim(),
+      code: currentSubject.code.trim() || `CUST-${timestamp.slice(-4)}`,
+      credits: creditsNum,
     };
-    setSubjects([...subjects, newSubject]);
+    setSubjects(prev => [...prev, newSubject]);
     setCurrentSubject({ name: '', code: '', credits: '' });
-  };
+    Keyboard.dismiss();
+  }, [currentSubject]);
+
+  // Import subjects from department/semester
+  const importSubjectsFromDepartment = useCallback(() => {
+    const deptSubs = departmentSubjectsCredits[selectedDept]?.[selectedSem];
+    if (!deptSubs || deptSubs.length === 0) {
+      Alert.alert('Info', 'No subjects found for the selected department and semester.');
+      return;
+    }
+
+    const newSubjects = deptSubs.map(s => ({
+      id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      name: s.name,
+      code: s.code,
+      credits: s.credits,
+    }));
+
+    setSubjects(prev => [...prev, ...newSubjects]);
+  }, [selectedDept, selectedSem]);
 
   // Remove subject function
-  const removeSubject = (id) => {
-    setSubjects(subjects.filter(subject => subject.id !== id));
-    const newGrades = { ...grades };
-    delete newGrades[id];
-    setGrades(newGrades);
-  };
+  const removeSubject = useCallback((id) => {
+    setSubjects(prev => prev.filter(subject => subject.id !== id));
+    setGrades(prev => {
+      const newGrades = { ...prev };
+      delete newGrades[id];
+      return newGrades;
+    });
+  }, []);
+
+  const clearAllSubjects = useCallback(() => {
+    if (subjects.length === 0) return;
+    Alert.alert(
+      'Clear All',
+      'Are you sure you want to remove all added subjects?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Clear All',
+          style: 'destructive',
+          onPress: () => {
+            setSubjects([]);
+            setGrades({});
+          }
+        }
+      ]
+    );
+  }, [subjects.length]);
 
   // Navigate to grade selection
-  const proceedToGrades = () => {
+  const proceedToGrades = useCallback(() => {
     if (subjects.length === 0) {
       Alert.alert('Error', 'Please add at least one subject');
       return;
     }
     setCurrentScreen('grades');
-  };
+  }, [subjects.length]);
 
   // Update grade function
-  const updateGrade = (subjectId, grade) => {
-    // find subject to determine key (prefer code for consistency with other screens)
-    const subject = subjects.find(s => s.id === subjectId);
-    const key = subject && subject.code ? subject.code : subjectId;
+  const updateGrade = useCallback((subjectId, grade) => {
     setGrades(prev => ({
       ...prev,
-      [key]: grade,
+      [subjectId]: grade,
     }));
-  };
+  }, []);
+
+  // Calculate current CGPA for results
+  const currentCGPA = useMemo(() => {
+    let totalPoints = 0;
+    let totalCredits = 0;
+    subjects.forEach(subject => {
+      const grade = grades[subject.id];
+      const points = gradePoints[grade] || 0;
+      totalPoints += points * subject.credits;
+      totalCredits += subject.credits;
+    });
+    return totalCredits > 0 ? (totalPoints / totalCredits).toFixed(2) : '0.00';
+  }, [subjects, grades, gradePoints]);
 
   // Calculate CGPA function - save then navigate to shared Result screen
-  const calculateCGPA = async () => {
-    const subjectsWithoutGrades = subjects.filter(subject => {
-      const key = subject.code || subject.id;
-      return !grades[key];
-    });
+  const calculateCGPA = useCallback(async () => {
+    if (!currentUser || !currentUser.name) {
+      Alert.alert(
+        'Profile Required',
+        'Please set up your profile first to calculate and save your CGPA.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Set up Profile', onPress: () => navigation.navigate('ViewProfile') }
+        ]
+      );
+      return;
+    }
+
+    const subjectsWithoutGrades = subjects.filter(subject => !grades[subject.id]);
+
     if (subjectsWithoutGrades.length > 0) {
       Alert.alert(
         'Missing Grades',
@@ -131,45 +200,25 @@ export default function CombinedCGPATracker({ navigation }) {
       return;
     }
 
-    // Calculate CGPA first
-    const cgpa = calculateCurrentCGPA();
-
-    // Navigate directly to Result screen without saving first
     navigation.navigate('Result', {
-      cgpa: parseFloat(cgpa),
+      cgpa: parseFloat(currentCGPA),
       semester: currentSemester,
       department: currentDepartment,
       totalSubjects: subjects.length,
       isCustom: true,
-      // Pass subjects data for display in Result screen
       subjects: subjects.map(s => {
-        const key = s.code || s.id;
-        const selectedGrade = grades[key] || null;
+        const selectedGrade = grades[s.id];
         return {
-          id: s.id || (s.code || '') + '-' + (s.name || '').slice(0, 4),
-          code: s.code || '',
-          name: s.name || '',
-          credits: s.credits || 0,
+          id: s.id,
+          code: s.code,
+          name: s.name,
+          credits: s.credits,
           grade: selectedGrade,
-          gradePoints: selectedGrade ? (gradePoints[selectedGrade] || 0) : (s.gradePoints || 0)
+          gradePoints: gradePoints[selectedGrade] || 0
         };
       })
     });
-  };
-
-  // Calculate current CGPA for results
-  const calculateCurrentCGPA = () => {
-    let totalPoints = 0;
-    let totalCredits = 0;
-    subjects.forEach(subject => {
-      const key = subject.code || subject.id;
-      const grade = grades[key];
-      const points = gradePoints[grade] || 0;
-      totalPoints += points * subject.credits;
-      totalCredits += subject.credits;
-    });
-    return totalCredits > 0 ? (totalPoints / totalCredits).toFixed(2) : 0;
-  };
+  }, [subjects, grades, currentCGPA, navigation, currentSemester, currentDepartment, gradePoints]);
 
   // Render header
   const renderHeader = () => {
@@ -202,101 +251,152 @@ export default function CombinedCGPATracker({ navigation }) {
   const renderSubjectInput = () => (
     <KeyboardAvoidingView
       style={styles.flex1}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <ScrollView
-        style={styles.scrollView}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
-      >
-        <View style={styles.screenContent}>
-          <View style={styles.inputContainer}>
-            <Text style={styles.sectionTitle}>Subject Details</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Subject Name"
-              value={currentSubject.name}
-              onChangeText={(text) => setCurrentSubject({ ...currentSubject, name: text })}
-              placeholderTextColor="#666"
-            />
-            <TextInput
-              style={styles.input}
-              placeholder="Subject Code"
-              value={currentSubject.code}
-              onChangeText={(text) => setCurrentSubject({ ...currentSubject, code: text })}
-              placeholderTextColor="#666"
-            />
-            <TextInput
-              style={styles.input}
-              placeholder="Credits"
-              value={currentSubject.credits}
-              onChangeText={(text) => setCurrentSubject({ ...currentSubject, credits: text })}
-              keyboardType="numeric"
-              placeholderTextColor="#666"
-            />
-            <PrimaryButton
-              title="Add Subject"
-              iconName="plus"
-              onPress={addSubject}
-              style={styles.addButton}
-              textStyle={styles.addButtonText}
-            />
-          </View>
+      <FlatList
+        data={subjects}
+        keyExtractor={item => item.id}
+        renderItem={({ item }) => (
+          <PreviewCard
+            subject={item}
+            onRemove={() => removeSubject(item.id)}
+          />
+        )}
+        ListHeaderComponent={(
+          <View style={styles.screenContent}>
+            {/* Quick Pre-fill Section */}
+            <View style={styles.inputContainer}>
+              <Text style={styles.sectionTitle}>Pre-fill from Syllabus</Text>
+              <Text style={styles.subtitle}>Quickly add subjects from official curriculum</Text>
 
-          {subjects.length > 0 && (
-            <View style={styles.previewContainer}>
-              <Text style={styles.sectionTitle}>Added Subjects ({subjects.length})</Text>
+              <View style={styles.pickerRow}>
+                <View style={styles.pickerWrapper}>
+                  <Picker
+                    selectedValue={selectedDept}
+                    onValueChange={(val) => setSelectedDept(val)}
+                    style={styles.picker}
+                    mode="dropdown"
+                  >
+                    <Picker.Item label="CSE" value="CSE" />
+                    <Picker.Item label="IT" value="IT" />
+                    <Picker.Item label="EEE" value="EEE" />
+                  </Picker>
+                </View>
 
-              <FlatList
-                data={subjects}
-                keyExtractor={item => item.id}
-                renderItem={({ item }) => (
-                  <PreviewCard
-                    subject={item}
-                    onRemove={() => removeSubject(item.id)}
-                  />
+                <View style={styles.pickerWrapper}>
+                  <Picker
+                    selectedValue={selectedSem}
+                    onValueChange={(val) => setSelectedSem(val)}
+                    style={styles.picker}
+                    mode="dropdown"
+                  >
+                    {[1, 2, 3, 4, 5, 6, 7, 8].map(s => (
+                      <Picker.Item key={s} label={`Sem ${s}`} value={s} />
+                    ))}
+                  </Picker>
+                </View>
+              </View>
+
+              <TouchableOpacity
+                style={styles.loadButton}
+                onPress={importSubjectsFromDepartment}
+              >
+                <Ionicons name="download-outline" size={18} color="#fff" style={styles.loadIcon} />
+                <Text style={styles.loadButtonText}>Load Subjects</Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.inputContainer}>
+              <View style={styles.sectionHeaderRow}>
+                <Text style={styles.sectionTitle}>Subject Details</Text>
+                {subjects.length > 0 && (
+                  <TouchableOpacity onPress={clearAllSubjects}>
+                    <Text style={styles.clearAllText}>Clear All</Text>
+                  </TouchableOpacity>
                 )}
-                scrollEnabled={false}
-                showsVerticalScrollIndicator={false}
-                style={styles.previewList}
+              </View>
+              <TextInput
+                style={styles.input}
+                placeholder="Subject Name (e.g. Mathematics)"
+                value={currentSubject.name}
+                onChangeText={(text) => setCurrentSubject(prev => ({ ...prev, name: text }))}
+                placeholderTextColor="#999"
+                returnKeyType="next"
               />
-
+              <TextInput
+                style={styles.input}
+                placeholder="Subject Code (Optional)"
+                value={currentSubject.code}
+                onChangeText={(text) => setCurrentSubject(prev => ({ ...prev, code: text }))}
+                placeholderTextColor="#999"
+                returnKeyType="next"
+              />
+              <TextInput
+                style={styles.input}
+                placeholder="Credits (e.g. 4)"
+                value={currentSubject.credits}
+                onChangeText={(text) => {
+                  // Only allow digits (no decimals, no special chars)
+                  const cleaned = text.replace(/[^0-9]/g, '');
+                  setCurrentSubject(prev => ({ ...prev, credits: cleaned }));
+                }}
+                keyboardType="numeric"
+                placeholderTextColor="#999"
+                returnKeyType="done"
+                onSubmitEditing={addSubject}
+              />
               <PrimaryButton
-                title="Proceed to Grade Selection"
-                iconName="arrow-right"
-                onPress={proceedToGrades}
-                style={styles.proceedButtonLarge}
-                textStyle={styles.proceedButtonText}
+                title="Add Subject"
+                iconName="plus"
+                onPress={addSubject}
+                style={styles.addButton}
+                textStyle={styles.addButtonText}
               />
             </View>
-          )}
-        </View>
-      </ScrollView>
+            {subjects.length > 0 && (
+              <Text style={styles.sectionTitle}>Added Subjects ({subjects.length})</Text>
+            )}
+          </View>
+        )}
+        ListFooterComponent={subjects.length > 0 ? (
+          <View style={styles.footerContainer}>
+            <PrimaryButton
+              title="Proceed to Grade Selection"
+              iconName="arrow-right"
+              onPress={proceedToGrades}
+              style={styles.proceedButtonLarge}
+              textStyle={styles.proceedButtonText}
+            />
+          </View>
+        ) : null}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      />
     </KeyboardAvoidingView>
   );
 
   // Grade Selection Screen Content
   const renderGradeSelection = () => (
-    <ScrollView
-      style={styles.scrollView}
-      showsVerticalScrollIndicator={false}
-      contentContainerStyle={styles.scrollContent}
-    >
-      <View style={styles.screenContent}>
-        <View style={styles.subjectsContainer}>
-          <Text style={styles.sectionTitle}>Select Grades</Text>
-          <Text style={styles.subtitle}>Tap on the grade for each subject</Text>
-
-          {subjects.map((subject) => (
-            <SubjectCard
-              key={subject.id}
-              subject={subject}
-              selectedGrade={grades[subject.id]}
-              onGradeChange={(grade) => updateGrade(subject.id, grade)}
-            />
-          ))}
+    <FlatList
+      data={subjects}
+      keyExtractor={item => item.id}
+      renderItem={({ item }) => (
+        <SubjectCard
+          subject={item}
+          selectedGrade={grades[item.id]}
+          onGradeChange={(grade) => updateGrade(item.id, grade)}
+        />
+      )}
+      ListHeaderComponent={(
+        <View style={styles.screenContent}>
+          <View style={styles.gradesHeader}>
+            <Text style={styles.sectionTitle}>Select Grades</Text>
+            <Text style={styles.subtitle}>Tap on the grade for each subject</Text>
+          </View>
         </View>
-
+      )}
+      ListFooterComponent={(
         <View style={styles.calculateContainer}>
           <PrimaryButton
             title="Calculate CGPA"
@@ -307,12 +407,15 @@ export default function CombinedCGPATracker({ navigation }) {
           />
 
           <TouchableOpacity style={styles.backButton} onPress={() => setCurrentScreen('input')}>
-            <FontAwesome5 name="arrow-left" size={14} color="#232867" style={styles.buttonIcon} />
+            <Ionicons name="arrow-back" size={18} color="#232867" style={styles.buttonIcon} />
             <Text style={styles.backButtonText}>Back to Subjects</Text>
           </TouchableOpacity>
         </View>
-      </View>
-    </ScrollView>
+      )}
+      contentContainerStyle={styles.scrollContent}
+      showsVerticalScrollIndicator={false}
+      keyboardShouldPersistTaps="handled"
+    />
   );
 
   return (
@@ -338,6 +441,53 @@ const styles = StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: '#e9edfa'
+  },
+  exportButtonDisabled: {
+    opacity: 0.7,
+    backgroundColor: '#9ca3af',
+  },
+  pickerRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 15,
+    marginBottom: 10,
+  },
+  pickerWrapper: {
+    flex: 1,
+    backgroundColor: '#f8fafc',
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: '#e2e8f0',
+    overflow: 'hidden',
+    height: 50,
+    justifyContent: 'center',
+  },
+  picker: {
+    height: 50,
+    width: '100%',
+    color: '#333',
+  },
+  loadButton: {
+    backgroundColor: '#232867',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 12,
+    borderRadius: 12,
+    marginTop: 8,
+  },
+  loadButtonText: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 14,
+  },
+  loadIcon: {
+    marginRight: 6,
+  },
+  subtitle: {
+    fontSize: 12,
+    color: '#64748b',
+    marginTop: 2,
   },
   flex1: {
     flex: 1,
@@ -411,47 +561,60 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    flexGrow: 1,
-    paddingBottom: 30,
+    paddingBottom: 40,
+    paddingHorizontal: 20,
   },
   screenContent: {
-    paddingHorizontal: 20,
-    paddingBottom: 20,
+    paddingTop: 10,
+    paddingBottom: 10,
+  },
+  footerContainer: {
+    marginTop: 10,
   },
 
   // Input Section
   inputContainer: {
     backgroundColor: '#ffffff',
-    borderRadius: 16,
+    borderRadius: 20,
     padding: 24,
     marginBottom: 20,
     elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowColor: '#232867',
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
-    shadowRadius: 6,
+    shadowRadius: 8,
+  },
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
   },
   sectionTitle: {
     fontSize: 20,
-    fontWeight: '600',
-    marginBottom: 16,
+    fontWeight: 'bold',
     color: '#232867',
+  },
+  clearAllText: {
+    fontSize: 14,
+    color: '#FF3B30',
+    fontWeight: '600',
   },
   subtitle: {
     fontSize: 14,
     color: '#666',
-    marginBottom: 20,
+    marginTop: 4,
     textAlign: 'center',
   },
   input: {
-    borderWidth: 1,
-    borderColor: '#e1e1e1',
+    borderWidth: 1.5,
+    borderColor: '#eee',
     borderRadius: 12,
     padding: 16,
     fontSize: 16,
-    marginBottom: 16,
-    backgroundColor: '#fafafa',
-    color: '#333',
+    marginBottom: 14,
+    backgroundColor: '#fdfdfd',
+    color: '#232867',
   },
   addButton: {
     backgroundColor: '#232867',
@@ -460,86 +623,49 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'center',
-    marginTop: 8,
+    marginTop: 6,
   },
   addButtonText: {
     color: 'white',
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
   },
 
   // Preview Section
-  previewContainer: {
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    padding: 20,
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-  },
   previewList: {
     marginBottom: 16,
   },
-  previewCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f8f9fa',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 10,
-    borderLeftWidth: 4,
-    borderLeftColor: '#007AFF',
-  },
-  previewContent: {
-    flex: 1,
-    marginRight: 12,
-  },
-  previewName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 4,
-  },
-  previewDetails: {
-    fontSize: 14,
-    color: '#666',
-  },
-  removeButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#DC3545',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  removeButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
   proceedButtonLarge: {
-    backgroundColor: '#28A745',
-    borderRadius: 12,
-    padding: 16,
+    backgroundColor: '#4facfe',
+    borderRadius: 16,
+    padding: 18,
     alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'center',
+    elevation: 4,
+    shadowColor: '#4facfe',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
   },
   proceedButtonText: {
     color: 'white',
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 17,
+    fontWeight: 'bold',
   },
 
   // Grade Selection
+  gradesHeader: {
+    alignItems: 'center',
+    marginBottom: 20,
+  },
   subjectsContainer: {
     marginBottom: 20,
   },
   calculateContainer: {
     alignItems: 'center',
-    gap: 16,
+    paddingBottom: 30,
+    marginTop: 10,
   },
   calcBtn: {
     backgroundColor: '#232867',
@@ -547,15 +673,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     borderRadius: 16,
     width: '100%',
-    maxWidth: 300,
     alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'center',
-    elevation: 6,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
+    elevation: 8,
+    shadowColor: '#232867',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
   },
   calcBtnText: {
     color: '#fff',
@@ -566,12 +691,13 @@ const styles = StyleSheet.create({
   backButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 12,
+    padding: 16,
+    marginTop: 10,
   },
   backButtonText: {
     color: '#232867',
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: 15,
+    fontWeight: 'bold',
   },
 
   // Common
