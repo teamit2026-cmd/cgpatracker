@@ -1,8 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { StyleSheet, Text, View, ScrollView, TouchableOpacity, Alert, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
-import { MaterialIcons } from '@expo/vector-icons';
+import { MaterialIcons, FontAwesome } from '@expo/vector-icons';
 
 const teamMembers = [
   {
@@ -44,6 +44,28 @@ const teamMembers = [
 
 export default function AboutCGPATracker() {
   const navigation = useNavigation();
+  const [activeIndex, setActiveIndex] = useState(0);
+
+  const handleScroll = (event) => {
+    const { contentOffset, contentSize, layoutMeasurement } = event.nativeEvent;
+
+    // Calculate the total scrollable width
+    const maxScroll = contentSize.width - layoutMeasurement.width;
+
+    // Avoid division by zero if content fits on screen
+    if (maxScroll <= 0) {
+      setActiveIndex(0);
+      return;
+    }
+
+    // Calculate index based on scroll percentage
+    const scrollPercentage = contentOffset.x / maxScroll;
+    const index = Math.round(scrollPercentage * (teamMembers.length - 1));
+
+    // Clamp index to valid range
+    const safeIndex = Math.max(0, Math.min(index, teamMembers.length - 1));
+    setActiveIndex(safeIndex);
+  };
 
   const handleSocialLink = (platform, url, name) => {
     Alert.alert(
@@ -134,6 +156,8 @@ export default function AboutCGPATracker() {
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.teamScrollContainer}
           style={styles.teamScrollView}
+          onScroll={handleScroll}
+          scrollEventThrottle={16}
         >
           {teamMembers.map((member, index) => (
             <View key={index} style={styles.teamBox}>
@@ -147,18 +171,30 @@ export default function AboutCGPATracker() {
                   style={[styles.iconButton, { backgroundColor: '#0077B5' }]}
                   onPress={() => handleSocialLink('LinkedIn', member.linkedin, member.name)}
                 >
-                  <MaterialIcons name="link" size={20} color="#fff" />
+                  <FontAwesome name="linkedin" size={20} color="#fff" />
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.iconButton, { backgroundColor: '#333' }]}
                   onPress={() => handleSocialLink('GitHub', member.github, member.name)}
                 >
-                  <MaterialIcons name="code" size={20} color="#fff" />
+                  <FontAwesome name="github" size={20} color="#fff" />
                 </TouchableOpacity>
               </View>
             </View>
           ))}
         </ScrollView>
+
+        <View style={styles.indicatorContainer}>
+          {teamMembers.map((_, index) => (
+            <View
+              key={index}
+              style={[
+                styles.dot,
+                activeIndex === index && styles.activeDot,
+              ]}
+            />
+          ))}
+        </View>
 
         <View style={styles.ctaBox}>
           <Text style={styles.ctaTitle}>Ready to Calculate Your CGPA?</Text>
@@ -383,4 +419,24 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     padding: 10,
   },
+  indicatorContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: -10,
+    marginBottom: 20,
+    gap: 8,
+  },
+  dot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#cbd5e1',
+  },
+  activeDot: {
+    width: 24,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#3b82f6',
+  }
 });

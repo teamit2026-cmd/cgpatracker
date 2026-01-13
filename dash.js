@@ -64,7 +64,7 @@ const DEVELOPER_MESSAGES = [
   {
     name: 'Barath',
     role: 'Logic Specialist',
-    message: 'Helping students stay ahead with real-time GCPA insights.',
+    message: 'Helping students stay ahead with real-time CGPA insights.',
     color: '#232867',
     gradient: ['#ffffff', '#e3f2fd'],
     avatar: '💡',
@@ -243,7 +243,7 @@ const Dashboard = ({ navigation }) => {
       </SafeAreaView>
 
       {/* Content Area */}
-      <View style={styles.contentArea}>
+      <ScrollView style={styles.contentArea}>
         <WelcomeSection userName="Robert" />
 
         {/* Dashboard Cards */}
@@ -285,7 +285,7 @@ const Dashboard = ({ navigation }) => {
           <View style={styles.reviewSection}>
             <View style={styles.sectionHeader}>
               <View>
-                <Text style={styles.sectionLabel}>Developer's Messages & Reviews</Text>
+                <Text style={styles.sectionLabel}>Developer's Message</Text>
                 {/* <Text style={styles.sectionSubtitle}>From our development team</Text> */}
               </View>
               <View style={styles.cardIndicatorContainer}>
@@ -420,7 +420,7 @@ const Dashboard = ({ navigation }) => {
           </View>
         </View>
         <HexonyxFooter />
-      </View>
+      </ScrollView>
 
       {/* Menu Modal */}
       <Modal
@@ -491,7 +491,7 @@ const Dashboard = ({ navigation }) => {
           </View>
         </TouchableOpacity>
       </Modal>
-    </View>
+    </View >
   );
 };
 

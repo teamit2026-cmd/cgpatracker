@@ -247,7 +247,7 @@ const Result = () => {
         gradeColor: gradeColor
       });
 
-      console.log('✅ Department result calculated successfully:', result);
+      // console.log('Debug info removed for release');('✅ Department result calculated successfully:', result);
     } catch (error) {
       console.error('❌ Error calculating department result:', error);
       Alert.alert('Calculation Error', 'Failed to calculate department result');
@@ -275,7 +275,7 @@ const Result = () => {
         subjects: subjects
       });
 
-      console.log('✅ Custom result calculated successfully:', result);
+      // console.log('Debug info removed for release');('✅ Custom result calculated successfully:', result);
     } catch (error) {
       console.error('❌ Error calculating custom result:', error);
       Alert.alert('Calculation Error', 'Failed to calculate custom result');

@@ -59,7 +59,7 @@ class GradeService {
             mongoId: null,
           };
 
-          console.log('💾 Saving grade to Realm:', grade);
+          // console.log('Debug info removed for release');('💾 Saving grade to Realm:', grade);
           const savedGrade = realm.create('Grade', grade, Realm.UpdateMode.Modified);
           resolve(savedGrade);
         });
@@ -201,11 +201,11 @@ class GradeService {
         mongoId: null,
       };
 
-      console.log('✅ Creating validated grade:', realmGrade);
+      // console.log('Debug info removed for release');('✅ Creating validated grade:', realmGrade);
       realmGrades.push(realmGrade);
     });
 
-    console.log(`✅ Converted ${realmGrades.length} valid grades for Realm`);
+    // console.log('Debug info removed for release');(`✅ Converted ${realmGrades.length} valid grades for Realm`);
     return realmGrades;
   }
 

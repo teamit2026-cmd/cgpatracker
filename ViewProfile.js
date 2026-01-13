@@ -11,6 +11,7 @@ import {
   Dimensions,
   ScrollView,
   ActivityIndicator,
+  BackHandler,
 } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { Ionicons } from "@expo/vector-icons";
@@ -62,6 +63,8 @@ export default function ViewProfile() {
     loadUserProfile();
   }, []);
 
+
+
   const loadUserProfile = async () => {
     try {
       setIsLoading(true);
@@ -82,7 +85,7 @@ export default function ViewProfile() {
         setCurrentUserId(null);
       }
     } catch (error) {
-      console.log("❌ Error loading user profile from Realm:", error);
+      // console.log('Debug info removed for release');("❌ Error loading user profile from Realm:", error);
       showToast("Error loading profile: " + error.message, "error");
     } finally {
       setIsLoading(false);
@@ -197,7 +200,7 @@ export default function ViewProfile() {
 
       if (currentUser) {
         // UPDATE existing user
-        console.log("🔄 Updating user profile:", editProfile);
+        // console.log('Debug info removed for release');("🔄 Updating user profile:", editProfile);
         // Sanitize all inputs before saving
         await UserService.saveUser({
           id: currentUser.id,
@@ -213,7 +216,7 @@ export default function ViewProfile() {
         showToast("Profile updated successfully!", "success");
       } else {
         // Create new user
-        console.log("🔄 Creating new user profile:", editProfile);
+        // console.log('Debug info removed for release');("🔄 Creating new user profile:", editProfile);
         // Sanitize all inputs before saving
         const savedUser = await UserService.saveUser({
           name: editProfile.name.trim().substring(0, 50),
@@ -229,7 +232,7 @@ export default function ViewProfile() {
         showToast("Profile created successfully!", "success");
       }
     } catch (error) {
-      console.log("❌ Error saving profile to Realm:", error);
+      // console.log('Debug info removed for release');("❌ Error saving profile to Realm:", error);
       showToast("Failed to save profile: " + error.message, "error");
     }
   };
@@ -253,7 +256,7 @@ export default function ViewProfile() {
             value={editProfile.name}
             onChangeText={handleNameChange}
             placeholder="Enter your full name"
-            placeholderTextColor="#9ca3af"
+            placeholderTextColor="#64748b"
             maxLength={50}
           />
         </View>
@@ -274,7 +277,7 @@ export default function ViewProfile() {
             value={editProfile.regNo}
             onChangeText={handleRegNoChange}
             placeholder="Enter registration number"
-            placeholderTextColor="#9ca3af"
+            placeholderTextColor="#64748b"
             keyboardType="numeric"
             maxLength={12}
           />
@@ -296,7 +299,7 @@ export default function ViewProfile() {
             value={editProfile.email}
             onChangeText={handleEmailChange}
             placeholder="Enter your email"
-            placeholderTextColor="#9ca3af"
+            placeholderTextColor="#64748b"
             keyboardType="email-address"
             autoCapitalize="none"
             maxLength={100}
@@ -322,8 +325,9 @@ export default function ViewProfile() {
             }}
             style={styles.picker}
             mode="dropdown"
+            dropdownIconColor="#232867"
           >
-            <Picker.Item label="Select Department" value="" enabled={false} />
+            <Picker.Item label="Select Department" value="" color="#999" />
             {departmentOptions.map((option) => (
               <Picker.Item key={option.value} label={option.label} value={option.value} />
             ))}
@@ -349,8 +353,9 @@ export default function ViewProfile() {
             }}
             style={styles.picker}
             mode="dropdown"
+            dropdownIconColor="#232867"
           >
-            <Picker.Item label="Select Year" value="" enabled={false} />
+            <Picker.Item label="Select Year" value="" color="#999" />
             {yearOptions.map((option) => (
               <Picker.Item key={option.value} label={option.label} value={option.value} />
             ))}
@@ -427,7 +432,12 @@ export default function ViewProfile() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContainer}
       />
-      <Modal visible={isEditModalVisible} animationType="slide" presentationStyle="pageSheet">
+      <Modal
+        visible={isEditModalVisible}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={handleCancelEdit}
+      >
         <SafeAreaView style={styles.modalContainer}>
           <View style={styles.modalHeader}>
             <TouchableOpacity onPress={handleCancelEdit} style={styles.cancelButton}>

@@ -2,8 +2,6 @@
 
 A professional and feature-rich CGPA tracking application for PKIET students, built with React Native and Expo. This application provides a seamless experience for calculating, monitoring, and managing academic performance with a focus on privacy and user experience.
 
-![App Header](assets/logo.png)
-
 ## ✨ Features
 
 - **Smart CGPA Calculation**: Fast and accurate algorithms tailored for university standards.

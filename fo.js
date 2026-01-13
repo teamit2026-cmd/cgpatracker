@@ -13,7 +13,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import Svg, { Path, Defs, LinearGradient, Stop } from 'react-native-svg';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { Picker } from '@react-native-picker/picker';
@@ -85,7 +85,7 @@ const CGPAProgressChart = () => {
         showEmptyData();
       }
     } catch (error) {
-      console.log('Error loading user or CGPA data:', error);
+      // console.log('Debug info removed for release');('Error loading user or CGPA data:', error);
       showEmptyData();
     } finally {
       setLoading(false);
@@ -131,7 +131,7 @@ const CGPAProgressChart = () => {
         showEmptyData();
       }
     } catch (error) {
-      console.log('Error loading CGPA data from Realm:', error);
+      // console.log('Debug info removed for release');('Error loading CGPA data from Realm:', error);
       showEmptyData();
     }
   };
@@ -254,6 +254,14 @@ const CGPAProgressChart = () => {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar backgroundColor={COLORS.lightBlue} barStyle="dark-content" />
+
+      {/* Header Bar */}
+      <View style={styles.headerBar}>
+        <View style={styles.headerTitleContainer}>
+          <Ionicons name="stats-chart" size={20} color="#00d0ffff" />
+          <Text style={styles.headerBarTitle}>Progress Analysis</Text>
+        </View>
+      </View>
 
       <ScrollView
         style={styles.scrollContainer}
@@ -495,6 +503,26 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.lightBlue,
+  },
+  headerBar: {
+    height: 56,
+    backgroundColor: COLORS.lightBlue,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#ffffff',
+  },
+  headerTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  headerBarTitle: {
+    marginLeft: 8,
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#232867',
   },
   loadingContainer: {
     flex: 1,

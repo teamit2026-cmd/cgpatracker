@@ -11,7 +11,10 @@ import {
   Animated,
   Dimensions,
   FlatList,
-  SafeAreaView
+  SafeAreaView,
+  Platform,
+  StatusBar,
+  ActivityIndicator
 } from 'react-native';
 import { MaterialIcons, Ionicons } from '@expo/vector-icons';
 import ResultService from './database/services/ResultService';
@@ -28,9 +31,13 @@ const Download = () => {
   const [detailModalVisible, setDetailModalVisible] = useState(false);
   const [expandedCards, setExpandedCards] = useState(new Set());
   const [currentTab, setCurrentTab] = useState(0); // 0: All Results, 1+: Department tabs
+  const [isLoading, setIsLoading] = useState(true);
+
+
 
   const slideAnim = useRef(new Animated.Value(height)).current;
   const flatListRef = useRef(null);
+  const tabListRef = useRef(null);
 
 
   useEffect(() => {
@@ -47,14 +54,21 @@ const Download = () => {
     try {
       const user = await UserService.getCurrentUser();
       setCurrentUser(user);
+      if (!user) {
+        setIsLoading(false);
+      }
     } catch (error) {
       console.error('Error loading current user:', error);
+      setIsLoading(false);
     }
   };
 
   const loadResults = async () => {
     try {
-      if (!currentUser) return;
+      if (!currentUser) {
+        setIsLoading(false);
+        return;
+      }
 
       const userResults = await ResultService.getResultsByUserId(currentUser.id);
       const resultsWithSubjects = Array.from(userResults).map(result => ({
@@ -64,6 +78,8 @@ const Download = () => {
       setResults(resultsWithSubjects);
     } catch (error) {
       console.error('Error loading results:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -101,6 +117,7 @@ const Download = () => {
   const handleTabPress = (index) => {
     setCurrentTab(index);
     flatListRef.current?.scrollToIndex({ index, animated: true });
+    tabListRef.current?.scrollToIndex({ index, animated: true, viewPosition: 0.5 });
   };
 
   const onMomentumScrollEnd = (e) => {
@@ -108,6 +125,7 @@ const Download = () => {
     const index = Math.round(contentOffset / width);
     if (index !== currentTab) {
       setCurrentTab(index);
+      tabListRef.current?.scrollToIndex({ index, animated: true, viewPosition: 0.5 });
     }
   };
 
@@ -140,31 +158,41 @@ const Download = () => {
     }
   };
 
-  const clearAllData = async () => {
+  const clearTabResults = async () => {
     try {
+      const activeTab = tabs[currentTab];
+      const tabName = activeTab.name;
+
       Alert.alert(
-        'Clear All Data',
-        'Are you sure you want to delete ALL your saved results? This action cannot be undone.',
+        `Clear ${tabName} Data`,
+        `Are you sure you want to delete all results in ${tabName}? This action cannot be undone.`,
         [
           { text: 'Cancel', style: 'cancel' },
           {
-            text: 'Delete All',
+            text: 'Delete',
             style: 'destructive',
             onPress: async () => {
               if (!currentUser) return;
-              const success = await ResultService.deleteAllResults(currentUser.id);
+
+              let success = false;
+              if (activeTab.isCustom) {
+                success = await ResultService.deleteCustomResults(currentUser.id);
+              } else {
+                success = await ResultService.deleteResultsByDepartment(currentUser.id, activeTab.id);
+              }
+
               if (success) {
                 // Success alert removed as requested
                 loadResults();
               } else {
-                Alert.alert('Info', 'No results to delete.');
+                Alert.alert('Info', 'No results to delete in this tab.');
               }
             }
           }
         ]
       );
     } catch (error) {
-      console.error('Error clearing data:', error);
+      console.error('Error clearing tab data:', error);
       Alert.alert('Error', 'Failed to clear data.');
     }
   };
@@ -204,13 +232,13 @@ const Download = () => {
             .semester-section { margin-bottom: 10px; page-break-inside: avoid; }
             .semester-header { background-color: #e9edfa; padding: 10px 15px; border-left: 5px solid #232867; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; }
             .semester-title { font-weight: bold; font-size: 16px; color: #232867; }
-            .semester-cgpa { font-weight: bold; background-color: #232867; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px; }
+            .semester-cgpa { font-weight: bold; color: #232867; font-size: 14px; }
             
             .grades-table { width: 100%; border-collapse: collapse; font-size: 14px; }
             .grades-table th { border-bottom: 2px solid #ddd; text-align: left; padding: 8px; color: #555; }
             .grades-table td { border-bottom: 1px solid #eee; padding: 8px; }
             
-            .grade-badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 12px; font-weight: bold; color: white; text-align: center; min-width: 25px; }
+
             
             .footer { text-align: center; margin-top: 50px; font-size: 10px; color: #64748b; border-top: 1px solid #eee; padding-top: 20px; }
             .developed-by { font-size: 8px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px; }
@@ -283,9 +311,7 @@ const Download = () => {
                       <td style="font-family: monospace; font-weight: bold;">${code}</td>
                       <td>${name}</td>
                       <td>
-                        <span class="grade-badge" style="background-color: ${getGradeColor(grade)}">
-                          ${grade}
-                        </span>
+                        ${grade}
                       </td>
                     </tr>
                   `}).join('')}
@@ -410,13 +436,18 @@ const Download = () => {
 
   const stats = calculateStatsForResults(currentTabResults);
 
-  if (!currentUser) {
+  if (isLoading) {
     return (
-      <View style={styles.loadingContainer}>
-        <Text style={styles.loadingText}>Loading...</Text>
-      </View>
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#232867" />
+          <Text style={styles.loadingText}>Loading CGPA Records...</Text>
+        </View>
+      </SafeAreaView>
     );
   }
+
+
 
   const renderTabContent = (tab) => {
     const tabResults = getResultsForTab(tab);
@@ -479,9 +510,9 @@ const Download = () => {
         {results.length > 0 && (
           <TouchableOpacity
             style={styles.clearAllButton}
-            onPress={clearAllData}
+            onPress={clearTabResults}
           >
-            <Text style={styles.clearAllButtonText}>🗑️ Clear All History</Text>
+            <Text style={styles.clearAllButtonText}>🗑️ Clear History</Text>
           </TouchableOpacity>
         )}
         <HexonyxFooter />
@@ -615,24 +646,25 @@ const Download = () => {
 
         {/* Tab Navigation */}
         {results.length > 0 && tabs.length > 0 && (
-          <ScrollView
+          <FlatList
+            ref={tabListRef}
+            data={tabs}
             horizontal
             showsHorizontalScrollIndicator={false}
             style={styles.tabContainer}
             contentContainerStyle={styles.tabScrollContent}
-          >
-            {tabs.map((tab, index) => (
+            keyExtractor={(item) => item.id}
+            renderItem={({ item, index }) => (
               <TouchableOpacity
-                key={tab.id}
                 style={[styles.tab, currentTab === index && styles.activeTab]}
                 onPress={() => handleTabPress(index)}
               >
                 <Text style={[styles.tabText, currentTab === index && styles.activeTabText]}>
-                  {tab.name}
+                  {item.name}
                 </Text>
               </TouchableOpacity>
-            ))}
-          </ScrollView>
+            )}
+          />
         )}
 
         {/* Sliding Content */}
@@ -689,66 +721,68 @@ const Download = () => {
                     </TouchableOpacity>
                   </View>
 
-                  <View style={styles.detailCard}>
-                    <View style={styles.detailSection}>
-                      <Text style={styles.sectionTitle}>Basic Information</Text>
-                      <View style={styles.detailRow}>
-                        <Text style={styles.detailLabel}>Semester:</Text>
-                        <Text style={styles.detailValue}>{selectedResult.semester}</Text>
-                      </View>
-                      <View style={styles.detailRow}>
-                        <Text style={styles.detailLabel}>Department:</Text>
-                        <Text style={styles.detailValue}>{selectedResult.department}</Text>
-                      </View>
-                    </View>
-
-                    <View style={styles.detailSection}>
-                      <Text style={styles.sectionTitle}>Performance</Text>
-                      <View style={styles.performanceRow}>
-                        <View style={styles.performanceItem}>
-                          <Text style={styles.performanceLabel}>CGPA</Text>
-                          <Text style={[styles.performanceValue, { color: getGradeColor(selectedResult.grade) }]}>
-                            {selectedResult.value}
-                          </Text>
+                  <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 20 }}>
+                    <View style={styles.detailCard}>
+                      <View style={styles.detailSection}>
+                        <Text style={styles.sectionTitle}>Basic Information</Text>
+                        <View style={styles.detailRow}>
+                          <Text style={styles.detailLabel}>Semester:</Text>
+                          <Text style={styles.detailValue}>{selectedResult.semester}</Text>
                         </View>
-                        <View style={styles.performanceItem}>
-                          <Text style={styles.performanceLabel}>Grade</Text>
-                          <Text style={[styles.performanceValue, { color: getGradeColor(selectedResult.grade) }]}>
-                            {selectedResult.grade}
-                          </Text>
+                        <View style={styles.detailRow}>
+                          <Text style={styles.detailLabel}>Department:</Text>
+                          <Text style={styles.detailValue}>{selectedResult.department}</Text>
                         </View>
                       </View>
+
+                      <View style={styles.detailSection}>
+                        <Text style={styles.sectionTitle}>Performance</Text>
+                        <View style={styles.performanceRow}>
+                          <View style={styles.performanceItem}>
+                            <Text style={styles.performanceLabel}>CGPA</Text>
+                            <Text style={[styles.performanceValue, { color: getGradeColor(selectedResult.grade) }]}>
+                              {selectedResult.value}
+                            </Text>
+                          </View>
+                          <View style={styles.performanceItem}>
+                            <Text style={styles.performanceLabel}>Grade</Text>
+                            <Text style={[styles.performanceValue, { color: getGradeColor(selectedResult.grade) }]}>
+                              {selectedResult.grade}
+                            </Text>
+                          </View>
+                        </View>
+                      </View>
+
+                      <View style={styles.detailSection}>
+                        <Text style={styles.sectionTitle}>Additional Info</Text>
+                        <View style={styles.detailRow}>
+                          <Text style={styles.detailLabel}>Total Subjects:</Text>
+                          <Text style={styles.detailValue}>{selectedResult.totalSubjects || 'N/A'}</Text>
+                        </View>
+                        <View style={styles.detailRow}>
+                          <Text style={styles.detailLabel}>Type:</Text>
+                          <Text style={styles.detailValue}>
+                            {selectedResult.isCustom ? 'Custom Subjects' : 'Department Subjects'}
+                          </Text>
+                        </View>
+                        <View style={styles.detailRow}>
+                          <Text style={styles.detailLabel}>Saved on:</Text>
+                          <Text style={styles.detailValue}>
+                            {selectedResult.dateFormatted} at {selectedResult.timeFormatted}
+                          </Text>
+                        </View>
+                      </View>
                     </View>
 
-                    <View style={styles.detailSection}>
-                      <Text style={styles.sectionTitle}>Additional Info</Text>
-                      <View style={styles.detailRow}>
-                        <Text style={styles.detailLabel}>Total Subjects:</Text>
-                        <Text style={styles.detailValue}>{selectedResult.totalSubjects || 'N/A'}</Text>
-                      </View>
-                      <View style={styles.detailRow}>
-                        <Text style={styles.detailLabel}>Type:</Text>
-                        <Text style={styles.detailValue}>
-                          {selectedResult.isCustom ? 'Custom Subjects' : 'Department Subjects'}
-                        </Text>
-                      </View>
-                      <View style={styles.detailRow}>
-                        <Text style={styles.detailLabel}>Saved on:</Text>
-                        <Text style={styles.detailValue}>
-                          {selectedResult.dateFormatted} at {selectedResult.timeFormatted}
-                        </Text>
-                      </View>
+                    <View style={styles.modalActions}>
+                      <TouchableOpacity
+                        style={styles.deleteButton}
+                        onPress={() => deleteResult(selectedResult.id)}
+                      >
+                        <Text style={styles.deleteButtonText}>🗑️ Delete Result</Text>
+                      </TouchableOpacity>
                     </View>
-                  </View>
-
-                  <View style={styles.modalActions}>
-                    <TouchableOpacity
-                      style={styles.deleteButton}
-                      onPress={() => deleteResult(selectedResult.id)}
-                    >
-                      <Text style={styles.deleteButtonText}>🗑️ Delete Result</Text>
-                    </TouchableOpacity>
-                  </View>
+                  </ScrollView>
                 </>
               )}
             </Animated.View>
@@ -763,6 +797,7 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: '#ffffff',
+    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
   },
   container: {
     flex: 1,
@@ -807,17 +842,17 @@ const styles = StyleSheet.create({
     flexGrow: 0,
   },
   tabScrollContent: {
-    paddingHorizontal: 20,
+    flexGrow: 1,
+    justifyContent: 'space-evenly',
   },
   tab: {
     paddingVertical: 15,
-    paddingHorizontal: 20,
+    paddingHorizontal: 15,
     minWidth: 100,
     justifyContent: 'center',
     alignItems: 'center',
     borderBottomWidth: 3,
     borderBottomColor: 'transparent',
-    marginRight: 10,
   },
   activeTab: {
     borderBottomColor: '#ffffff',

@@ -43,7 +43,7 @@ class ResultService {
     try {
       // Enhanced input validation
       if (!subjects) {
-        console.warn('calculateUniversalGPA: subjects is null or undefined');
+        // console.warn('calculateUniversalGPA: subjects is null or undefined');
         return {
           gpa: 0,
           totalGradePoints: 0,
@@ -65,7 +65,7 @@ class ResultService {
       }
 
       if (subjects.length === 0) {
-        console.warn('calculateUniversalGPA: subjects array is empty');
+        // console.warn('calculateUniversalGPA: subjects array is empty');
         return {
           gpa: 0,
           totalGradePoints: 0,
@@ -212,7 +212,7 @@ class ResultService {
 
             if (existing.length > 0) {
               id = existing[0].id;
-              console.log(`♻️ Overwriting existing result for Sem ${semester}, Dept ${department}`);
+              // console.log('Debug info removed for release');(`♻️ Overwriting existing result for Sem ${semester}, Dept ${department}`);
             } else {
               id = RealmDB.getInstance().generateId();
             }
@@ -255,81 +255,117 @@ class ResultService {
     });
   }
 
-  // Get all results for user
+  // OPTIMIZED: Get all results for user using improved memory mapping
   async getResultsByUserId(userId) {
     try {
       const realm = await this.ensureRealm();
       const results = realm.objects('Result')
         .filtered('userId == $0', userId)
         .sorted('timestamp', true);
-      try {
-        return Array.from(results).map(r => {
-          const obj = JSON.parse(JSON.stringify(r));
-          try {
-            obj.subjects = obj.subjectsJSON ? JSON.parse(obj.subjectsJSON) : (obj.subjects || []);
-          } catch (e) {
-            obj.subjects = obj.subjects || [];
-          }
-          return obj;
-        });
-      } catch (e) {
-        return Array.from(results).map(r => {
-          const obj = { ...r };
-          try {
-            obj.subjects = obj.subjectsJSON ? JSON.parse(obj.subjectsJSON) : (obj.subjects || []);
-          } catch (e) {
-            obj.subjects = obj.subjects || [];
-          }
-          return obj;
-        });
-      }
+
+      // Map manually to avoid JSON.parse(JSON.stringify(r)) overhead
+      // This creates lightweight plain JS objects
+      return results.map(r => {
+        let subjects = [];
+        try {
+          subjects = r.subjectsJSON ? JSON.parse(r.subjectsJSON) : [];
+        } catch (e) {
+          subjects = [];
+        }
+
+        return {
+          id: r.id,
+          userId: r.userId,
+          value: r.value,
+          semester: r.semester,
+          department: r.department,
+          totalSubjects: r.totalSubjects,
+          isCustom: r.isCustom,
+          grade: r.grade,
+          gradeColor: r.gradeColor,
+          subjects: subjects,
+          timestamp: r.timestamp,
+          dateFormatted: r.dateFormatted,
+          timeFormatted: r.timeFormatted,
+          createdAt: r.createdAt
+        };
+      });
     } catch (error) {
       console.error('❌ Error getting results by user ID:', error);
       return [];
     }
   }
 
-  // Get latest result for user
+  // OPTIMIZED: Get latest result for user
   async getLatestResult(userId) {
     try {
       const realm = await this.ensureRealm();
       const results = realm.objects('Result')
         .filtered('userId == $0', userId)
         .sorted('timestamp', true);
+
       if (!results || results.length === 0) return null;
+
+      const r = results[0];
+
+      // Manual mapping
+      let subjects = [];
       try {
-        return JSON.parse(JSON.stringify(results[0]));
+        subjects = r.subjectsJSON ? JSON.parse(r.subjectsJSON) : [];
       } catch (e) {
-        return { ...results[0] };
+        subjects = [];
       }
+
+      return {
+        id: r.id,
+        userId: r.userId,
+        value: r.value,
+        semester: r.semester,
+        department: r.department,
+        totalSubjects: r.totalSubjects,
+        isCustom: r.isCustom,
+        grade: r.grade,
+        gradeColor: r.gradeColor,
+        subjects: subjects,
+        timestamp: r.timestamp,
+        dateFormatted: r.dateFormatted,
+        timeFormatted: r.timeFormatted,
+        createdAt: r.createdAt
+      };
     } catch (error) {
       console.error('❌ Error getting latest result:', error);
       return null;
     }
   }
 
-  // Get results for chart data (fo.js)
+  // OPTIMIZED: Get results for chart data
   async getResultsForChart(userId, department = null) {
     try {
       const realm = await this.ensureRealm();
-      // Get only non-custom results for semester-wise chart
-      // If department is provided, filter by it
       let results;
+
+      // Using query builder for cleaner filtering
+      let query = 'userId == $0 AND isCustom == false';
+      let args = [userId];
+
       if (department) {
-        results = realm.objects('Result')
-          .filtered('userId == $0 AND isCustom == false AND department == $1', userId, department)
-          .sorted('semester', true);
-      } else {
-        results = realm.objects('Result')
-          .filtered('userId == $0 AND isCustom == false', userId)
-          .sorted('semester', true);
+        query += ' AND department == $1';
+        args.push(department);
       }
 
-      try {
-        return Array.from(results).map(r => JSON.parse(JSON.stringify(r)));
-      } catch (e) {
-        return Array.from(results).map(r => ({ ...r }));
-      }
+      results = realm.objects('Result')
+        .filtered(query, ...args)
+        .sorted('semester', true); // Note: String sort on 'Sem 1', 'Sem 2' might be imperfect but logic handles it elsewhere
+
+      // Lightweight mapping - we only need basic fields for charts
+      return results.map(r => ({
+        id: r.id,
+        value: r.value,
+        semester: r.semester,
+        department: r.department,
+        grade: r.grade,
+        timestamp: r.timestamp
+      }));
     } catch (error) {
       console.error('❌ Error getting results for chart:', error);
       return [];
@@ -373,6 +409,54 @@ class ResultService {
         });
       } catch (error) {
         console.error('❌ Error deleting all results:', error);
+        reject(error);
+      }
+    });
+  }
+
+  // Delete results by department
+  async deleteResultsByDepartment(userId, department) {
+    const realm = await this.ensureRealm();
+    return new Promise((resolve, reject) => {
+      try {
+        realm.write(() => {
+          const results = realm.objects('Result').filtered(
+            'userId == $0 AND department == $1 AND isCustom == false',
+            userId, department
+          );
+          if (results.length > 0) {
+            realm.delete(results);
+            resolve(true);
+          } else {
+            resolve(false);
+          }
+        });
+      } catch (error) {
+        console.error('❌ Error deleting department results:', error);
+        reject(error);
+      }
+    });
+  }
+
+  // Delete all custom results
+  async deleteCustomResults(userId) {
+    const realm = await this.ensureRealm();
+    return new Promise((resolve, reject) => {
+      try {
+        realm.write(() => {
+          const results = realm.objects('Result').filtered(
+            'userId == $0 AND isCustom == true',
+            userId
+          );
+          if (results.length > 0) {
+            realm.delete(results);
+            resolve(true);
+          } else {
+            resolve(false);
+          }
+        });
+      } catch (error) {
+        console.error('❌ Error deleting custom results:', error);
         reject(error);
       }
     });

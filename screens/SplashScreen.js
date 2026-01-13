@@ -7,71 +7,62 @@ import {
   StyleSheet,
   StatusBar,
   Platform,
+  useWindowDimensions,
+  Easing,
 } from 'react-native';
-import { FontAwesome5 } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native'; // Add this import
-
-const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
+import { useNavigation } from '@react-navigation/native';
 
 const SplashScreen = ({ onAnimationComplete, isDatabaseReady }) => {
+  const { width: screenWidth, height: screenHeight } = useWindowDimensions();
   const navigation = useNavigation();
-  const [animationDone, setAnimationDone] = useState(false);
+
+  // States for logic
+  const [minTimeElapsed, setMinTimeElapsed] = useState(false);
+  const [animationFinished, setAnimationFinished] = useState(false);
 
   // Animation values
   const containerOpacity = useRef(new Animated.Value(0)).current;
   const logoScale = useRef(new Animated.Value(0.5)).current;
-  const logoRotate = useRef(new Animated.Value(0)).current;
-  const backgroundGradient = useRef(new Animated.Value(0)).current;
+  // Removed backgroundAnim color interpolation to fix lag (requires JS driver)
   const fadeOut = useRef(new Animated.Value(1)).current;
   const particleAnim = useRef(new Animated.Value(0)).current;
   const progress = useRef(new Animated.Value(0)).current;
+  const glowAnim = useRef(new Animated.Value(0)).current;
 
   // Text animation state
   const [displayText, setDisplayText] = useState('');
   const [currentIndex, setCurrentIndex] = useState(0);
   const fullText = 'CGPA Tracker';
 
-  // Individual character animations
   const charAnimations = useRef(
     Array.from({ length: fullText.length }, () => new Animated.Value(0))
   ).current;
 
-  // Glow animation
-  const glowAnim = useRef(new Animated.Value(0)).current;
-
   useEffect(() => {
-    if (animationDone && isDatabaseReady) {
-      navigation.replace('Dashboard');
-    }
-  }, [animationDone, isDatabaseReady]);
+    // Start initial animations
+    startEntranceAnimation();
 
-  useEffect(() => {
-    startAnimation();
+    // Minimum wait time
+    const minTimer = setTimeout(() => {
+      setMinTimeElapsed(true);
+    }, 2500);
 
-    return () => {
-      containerOpacity.stopAnimation();
-      logoScale.stopAnimation();
-      fadeOut.stopAnimation();
-      charAnimations.forEach(anim => anim.stopAnimation());
-      particleAnim.stopAnimation();
-      glowAnim.stopAnimation();
-      progress.stopAnimation();
-    };
+    return () => clearTimeout(minTimer);
   }, []);
 
-  const startAnimation = () => {
-    // Background gradient animation
-    Animated.timing(backgroundGradient, {
-      toValue: 1,
-      duration: 1200,
-      useNativeDriver: false,
-    }).start();
+  // Watch for readiness to exit
+  useEffect(() => {
+    if (minTimeElapsed && isDatabaseReady && !animationFinished) {
+      finishLoadingAndExit();
+    }
+  }, [minTimeElapsed, isDatabaseReady, animationFinished]);
 
-    // Container fade & scale in
+  const startEntranceAnimation = () => {
+    // Container, Logo, Text
     Animated.parallel([
       Animated.timing(containerOpacity, {
         toValue: 1,
-        duration: 1000,
+        duration: 800,
         useNativeDriver: true,
       }),
       Animated.spring(logoScale, {
@@ -80,70 +71,35 @@ const SplashScreen = ({ onAnimationComplete, isDatabaseReady }) => {
         friction: 7,
         useNativeDriver: true,
       }),
+      // Progress bar slow start
       Animated.timing(progress, {
-        toValue: 1,
-        duration: 4500,
+        toValue: 0.7,
+        duration: 2500,
         useNativeDriver: true,
+        easing: Easing.out(Easing.cubic),
       }),
     ]).start();
 
-    // Particle rotation loop
+    // Particles - Smooth loop
     Animated.loop(
       Animated.sequence([
-        Animated.timing(particleAnim, {
-          toValue: 1,
-          duration: 2000,
-          useNativeDriver: true,
-        }),
-        Animated.timing(particleAnim, {
-          toValue: 0,
-          duration: 2000,
-          useNativeDriver: true,
-        }),
+        Animated.timing(particleAnim, { toValue: 1, duration: 2000, useNativeDriver: true }),
+        Animated.timing(particleAnim, { toValue: 0, duration: 2000, useNativeDriver: true }),
       ])
     ).start();
 
-    // Glow pulsing loop
+    // Glow - Smooth loop
     Animated.loop(
       Animated.sequence([
-        Animated.timing(glowAnim, {
-          toValue: 1,
-          duration: 1500,
-          useNativeDriver: true,
-        }),
-        Animated.timing(glowAnim, {
-          toValue: 0.3,
-          duration: 1500,
-          useNativeDriver: true,
-        }),
+        Animated.timing(glowAnim, { toValue: 1, duration: 1500, useNativeDriver: true }),
+        Animated.timing(glowAnim, { toValue: 0.3, duration: 1500, useNativeDriver: true }),
       ])
     ).start();
 
-    // Animate text appearance
+    // Text typing effect
     setTimeout(() => {
       animateText();
-    }, 800);
-
-    // Fade out and navigate to Auth screen
-    setTimeout(() => {
-      Animated.parallel([
-        Animated.timing(fadeOut, {
-          toValue: 0,
-          duration: 1200,
-          useNativeDriver: true,
-        }),
-        Animated.timing(logoScale, {
-          toValue: 1.2,
-          duration: 1200,
-          useNativeDriver: true,
-        }),
-      ]).start(() => {
-        if (onAnimationComplete) {
-          onAnimationComplete();
-        }
-        setAnimationDone(true);
-      });
-    }, 4500);
+    }, 500);
   };
 
   const animateText = () => {
@@ -165,58 +121,76 @@ const SplashScreen = ({ onAnimationComplete, isDatabaseReady }) => {
             useNativeDriver: true,
           }),
         ]).start();
-      }, i * 150);
+      }, i * 100);
     });
   };
 
-  const interpolatedBackground = backgroundGradient.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['#1a1a2e', '#16213e'],
-  });
+  const finishLoadingAndExit = () => {
+    setAnimationFinished(true);
+
+    // 1. Finish progress bar fast
+    Animated.timing(progress, {
+      toValue: 1,
+      duration: 300,
+      useNativeDriver: true,
+    }).start(() => {
+      // 2. Fade out everything
+      Animated.parallel([
+        Animated.timing(fadeOut, {
+          toValue: 0,
+          duration: 600,
+          useNativeDriver: true,
+        }),
+        Animated.timing(logoScale, {
+          toValue: 1.2,
+          duration: 600,
+          useNativeDriver: true,
+        }),
+      ]).start(() => {
+        if (onAnimationComplete) onAnimationComplete();
+        navigation.replace('Dashboard');
+      });
+    });
+  };
 
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#1a1a2e" />
-      <Animated.View
-        style={[
-          StyleSheet.absoluteFillObject,
-          { backgroundColor: interpolatedBackground },
-        ]}
-      />
 
-      {/* Particle Layer */}
-      <Animated.View
-        style={[
-          styles.particleContainer,
-          {
-            opacity: particleAnim.interpolate({
-              inputRange: [0, 1],
-              outputRange: [0.1, 0.3],
-            }),
-            transform: [
-              {
-                rotate: particleAnim.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: ['0deg', '360deg'],
-                }),
-              },
-            ],
-          },
-        ]}
-      >
-        {[...Array(8)].map((_, i) => (
-          <View
-            key={i}
-            style={[
-              styles.particle,
-              {
-                top: `${Math.random() * 100}%`,
-                left: `${Math.random() * 100}%`,
-              },
-            ]}
-          />
-        ))}
-      </Animated.View>
+      {/* Background is now static color to avoid JS-driver lag */}
+      <View style={[StyleSheet.absoluteFillObject, { backgroundColor: '#1a1a2e' }]} />
+
+      {/* Particles */}
+      <View style={[StyleSheet.absoluteFillObject, { overflow: 'hidden' }]}>
+        <Animated.View
+          style={[
+            styles.particleContainer,
+            {
+              width: screenWidth,
+              height: screenHeight,
+              opacity: particleAnim.interpolate({
+                inputRange: [0, 1],
+                outputRange: [0.3, 0.6],
+              }),
+            },
+          ]}
+        >
+          {[...Array(6)].map((_, i) => (
+            <View
+              key={i}
+              style={[
+                styles.particle,
+                {
+                  top: `${Math.random() * 100}%`,
+                  left: `${Math.random() * 100}%`,
+                  width: Math.random() * 4 + 2,
+                  height: Math.random() * 4 + 2,
+                },
+              ]}
+            />
+          ))}
+        </Animated.View>
+      </View>
 
       {/* Main Content */}
       <Animated.View
@@ -306,17 +280,13 @@ const SplashScreen = ({ onAnimationComplete, isDatabaseReady }) => {
         </Animated.Text>
       </Animated.View>
 
-      {/* Loading bar container */}
-      <Animated.View style={styles.loadingContainer}>
+      {/* Loading Bar */}
+      <Animated.View style={[styles.loadingContainer, { opacity: fadeOut }]}>
         <Animated.View
           style={[
             styles.loadingBar,
             {
-              transform: [
-                {
-                  scaleX: progress,
-                },
-              ],
+              transform: [{ scaleX: progress }],
             },
           ]}
         />
@@ -325,14 +295,13 @@ const SplashScreen = ({ onAnimationComplete, isDatabaseReady }) => {
   );
 };
 
-// Keep all your existing styles - they're perfect!
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  container: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#1a1a2e' },
   content: { alignItems: 'center', justifyContent: 'center', paddingHorizontal: 20 },
   textContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#64b5f6',
+    shadowColor: '#64b5f6', // Light Blue shadow
     shadowOffset: { width: 0, height: 0 },
     shadowRadius: 10,
     elevation: 15,
@@ -344,33 +313,41 @@ const styles = StyleSheet.create({
     alignItems: 'baseline',
   },
   handwritingChar: {
-    fontSize: Platform.OS === 'ios' ? 58 : 52,
+    fontSize: Platform.OS === 'ios' ? 48 : 42,
     fontWeight: '700',
     color: '#ffffff',
     fontFamily: Platform.OS === 'ios' ? 'HelveticaNeue' : 'sans-serif-condensed',
-    textShadowColor: '#64b5f6',
+    textShadowColor: '#64b5f6', // Light Blue Glow
     textShadowOffset: { width: 0, height: 2 },
     textShadowRadius: 10,
-    letterSpacing: 2,
+    letterSpacing: 1,
   },
   spaceChar: { width: 20 },
-  underline: { height: 3, backgroundColor: '#64b5f6', marginTop: 10, borderRadius: 2 },
+  underline: {
+    height: 3,
+    backgroundColor: '#64b5f6', // Light Blue
+    marginTop: 10,
+    borderRadius: 2,
+    shadowColor: '#64b5f6',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 5,
+    elevation: 5,
+  },
   tagline: {
     fontSize: 16,
-    color: '#b3e5fc',
+    color: '#b3e5fc', // Light Blue text
     fontWeight: '400',
     marginTop: 20,
     textAlign: 'center',
     letterSpacing: 1.5,
     fontFamily: Platform.OS === 'ios' ? 'HelveticaNeue-Light' : 'sans-serif-light',
   },
-  particleContainer: { position: 'absolute', width: screenWidth, height: screenHeight },
+  particleContainer: { position: 'absolute' },
   particle: {
     position: 'absolute',
-    width: 4,
-    height: 4,
-    backgroundColor: '#64b5f6',
-    borderRadius: 2,
+    backgroundColor: '#64b5f6', // Light Blue particles
+    borderRadius: 50,
     opacity: 0.6,
   },
   loadingContainer: {
@@ -384,11 +361,11 @@ const styles = StyleSheet.create({
   },
   loadingBar: {
     position: 'absolute',
+    left: 0,
     height: '100%',
-    width: 100,
-    backgroundColor: '#64b5f6',
+    width: '100%',
+    backgroundColor: '#64b5f6', // Light Blue
     borderRadius: 2,
-    transformOrigin: 'left',
   },
 });
 

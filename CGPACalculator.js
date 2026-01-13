@@ -76,6 +76,7 @@ function SemesterSubjects({ department, setDepartment, semester, setSemester, gr
           selectedValue={department}
           style={[styles.picker, { color: 'black' }]}
           itemStyle={{ color: 'black' }}
+          dropdownIconColor="black"
           onValueChange={(value) => {
             setDepartment(value);
             setGrades({});
@@ -83,7 +84,7 @@ function SemesterSubjects({ department, setDepartment, semester, setSemester, gr
           mode="dropdown"
         >
           {departmentOptions.map((option) => (
-            <Picker.Item key={option.value} label={option.label} value={option.value} />
+            <Picker.Item key={option.value} label={option.label} value={option.value} color="black" />
           ))}
         </Picker>
       </View>
@@ -94,6 +95,7 @@ function SemesterSubjects({ department, setDepartment, semester, setSemester, gr
           selectedValue={semester}
           style={[styles.picker, { color: 'black' }]}
           itemStyle={{ color: 'black' }}
+          dropdownIconColor="black"
           onValueChange={(value) => {
             if (value === 'custom') {
               navigation.navigate('CustomSubject');
@@ -105,9 +107,9 @@ function SemesterSubjects({ department, setDepartment, semester, setSemester, gr
           mode="dropdown"
         >
           {semesters.map((s) => (
-            <Picker.Item key={s} label={`Semester ${s}`} value={s} />
+            <Picker.Item key={s} label={`Semester ${s}`} value={s} color="black" />
           ))}
-          <Picker.Item label="Custom Subjects" value="custom" />
+          <Picker.Item label="Custom Subjects" value="custom" color="black" />
         </Picker>
       </View>
 
@@ -190,6 +192,7 @@ export default function CGPACalculator({ navigation }) {
       const user = await UserService.getCurrentUser();
       if (user) {
         setCurrentUser(user);
+        hideNotification();
         if (user.department && !currentUser) { // Only set department if not already set manually
           setDepartment(user.department);
         }

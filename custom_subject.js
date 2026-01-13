@@ -316,9 +316,10 @@ export default function CombinedCGPATracker({ navigation }) {
                     onValueChange={(val) => setSelectedDept(val)}
                     style={styles.picker}
                     mode="dropdown"
+                    dropdownIconColor="#232867"
                   >
                     {departmentOptions.map((option) => (
-                      <Picker.Item key={option.value} label={option.value} value={option.value} />
+                      <Picker.Item key={option.value} label={option.value} value={option.value} color="#333" />
                     ))}
                   </Picker>
                 </View>
@@ -329,9 +330,10 @@ export default function CombinedCGPATracker({ navigation }) {
                     onValueChange={(val) => setSelectedSem(val)}
                     style={styles.picker}
                     mode="dropdown"
+                    dropdownIconColor="#232867"
                   >
                     {[1, 2, 3, 4, 5, 6, 7, 8].map(s => (
-                      <Picker.Item key={s} label={`Sem ${s}`} value={s} />
+                      <Picker.Item key={s} label={`Sem ${s}`} value={s} color="#333" />
                     ))}
                   </Picker>
                 </View>
@@ -360,7 +362,7 @@ export default function CombinedCGPATracker({ navigation }) {
                 placeholder="Subject Name (e.g. Mathematics)"
                 value={currentSubject.name}
                 onChangeText={(text) => setCurrentSubject(prev => ({ ...prev, name: text }))}
-                placeholderTextColor="#999"
+                placeholderTextColor="#9ca3af"
                 returnKeyType="next"
                 maxLength={50}
               />
@@ -369,7 +371,7 @@ export default function CombinedCGPATracker({ navigation }) {
                 placeholder="Subject Code (Optional)"
                 value={currentSubject.code}
                 onChangeText={(text) => setCurrentSubject(prev => ({ ...prev, code: text }))}
-                placeholderTextColor="#999"
+                placeholderTextColor="#9ca3af"
                 returnKeyType="next"
                 maxLength={20}
               />
@@ -383,7 +385,7 @@ export default function CombinedCGPATracker({ navigation }) {
                   setCurrentSubject(prev => ({ ...prev, credits: cleaned }));
                 }}
                 keyboardType="numeric"
-                placeholderTextColor="#999"
+                placeholderTextColor="#9ca3af"
                 returnKeyType="done"
                 onSubmitEditing={addSubject}
               />

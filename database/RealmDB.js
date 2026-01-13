@@ -26,7 +26,7 @@ class RealmDB {
     }
 
     try {
-      console.log('🔄 Initializing Realm Database...');
+      // console.log('Debug info removed for release');('🔄 Initializing Realm Database...');
 
       this.realm = await Realm.open({
         path: 'cgpa-calculator.realm',
@@ -38,11 +38,11 @@ class RealmDB {
         ],
         schemaVersion: 5,
         migration: (oldRealm, newRealm) => {
-          console.log('🔄 Running Realm migration...');
+          // console.log('Debug info removed for release');('🔄 Running Realm migration...');
 
           // Migration from version 1 to 2 (original migration)
           if (oldRealm.schemaVersion < 2) {
-            console.log('🔄 Migrating from version 1 to 2...');
+            // console.log('Debug info removed for release');('🔄 Migrating from version 1 to 2...');
 
             const oldUsers = oldRealm.objects('User');
             const newUsers = newRealm.objects('User');
@@ -116,7 +116,7 @@ class RealmDB {
 
           // Migration from version 2 to 3 (for isActive property)
           if (oldRealm.schemaVersion < 3) {
-            console.log('🔄 Migrating from version 2 to 3 (adding isActive)...');
+            // console.log('Debug info removed for release');('🔄 Migrating from version 2 to 3 (adding isActive)...');
 
             const oldUsers = oldRealm.objects('User');
             const newUsers = newRealm.objects('User');
@@ -127,12 +127,12 @@ class RealmDB {
               newUser.isActive = true; // Set all existing users as active
             }
 
-            console.log(`✅ Added isActive to ${oldUsers.length} users`);
+            // console.log('Debug info removed for release');(`✅ Added isActive to ${oldUsers.length} users`);
           }
 
           // Migration from version 3 to 4: add subjectsJSON to Result and migrate if possible
           if (oldRealm.schemaVersion < 4) {
-            console.log('🔄 Migrating from version 3 to 4 (adding subjectsJSON to Result)...');
+            // console.log('Debug info removed for release');('🔄 Migrating from version 3 to 4 (adding subjectsJSON to Result)...');
             const oldResults = oldRealm.objects('Result');
             const newResults = newRealm.objects('Result');
             for (let i = 0; i < oldResults.length; i++) {
@@ -149,15 +149,15 @@ class RealmDB {
                 newR.subjectsJSON = '[]';
               }
             }
-            console.log('✅ Migration to v4 completed for results');
+            // console.log('Debug info removed for release');('✅ Migration to v4 completed for results');
           }
 
-          console.log('✅ Migration completed successfully');
+          // console.log('Debug info removed for release');('✅ Migration completed successfully');
         },
       });
 
       this.isInitialized = true;
-      console.log('✅ Realm database initialized successfully');
+      // console.log('Debug info removed for release');('✅ Realm database initialized successfully');
       return this.realm;
 
     } catch (error) {

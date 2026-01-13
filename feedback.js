@@ -71,67 +71,23 @@ const FeedbackForm = () => {
     }
 
     setIsSubmitting(true);
+    const recipientEmail = 'team.it.2026@gmail.com';
+    const subject = `Feedback: PKIET CGPA Tracker - ${trimmedEmail}`;
+    const mailBody = `Feedback from PKIET CGPA Tracker\n\nUser Email: ${trimmedEmail}\nRating: ${'⭐'.repeat(rating)} (${rating}/5)\n\nMessage:\n${trimmedFeedback}`;
+
+    const mailtoUrl = `mailto:${recipientEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(mailBody)}`;
+
     try {
-      // Improved network check
-      let isOnline = true;
-      try {
-        await fetch('https://www.google.com', {
-          method: 'HEAD',
-          mode: 'no-cors',
-          cache: 'no-cache',
-        });
-      } catch (networkError) {
-        isOnline = false;
-      }
-
-      if (!isOnline) {
-        Alert.alert(
-          'No Internet Connection',
-          'Please connect to the internet to send your feedback.'
-        );
-        setIsSubmitting(false);
-        return;
-      }
-
-      const recipientEmail = 'team.it.2026@gmail.com';
-      const subject = `Feedback: PKIET CGPA Tracker - ${trimmedEmail}`;
-      const mailBody = `Feedback from PKIET CGPA Tracker\n\nUser Email: ${trimmedEmail}\nRating: ${'⭐'.repeat(rating)} (${rating}/5)\n\nMessage:\n${trimmedFeedback}`;
-
-      const mailtoUrl = `mailto:${recipientEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(mailBody)}`;
-
-      let canOpenEmail = false;
-      try {
-        canOpenEmail = await Linking.canOpenURL(mailtoUrl);
-      } catch (linkError) {
-        console.error('Error checking mailto support:', linkError);
-        canOpenEmail = false;
-      }
-
-      if (canOpenEmail) {
-        try {
-          await Linking.openURL(mailtoUrl);
-          setEmail('');
-          setFeedback('');
-          setRating(0);
-          Alert.alert('Success', 'Email client opened. Please send your feedback.');
-        } catch (openError) {
-          console.error('Error opening email client:', openError);
-          Alert.alert(
-            'Error',
-            `Could not open email client. Please contact us manually at: ${recipientEmail}`
-          );
-        }
-      } else {
-        Alert.alert(
-          'Mail App Not Found',
-          'Please contact us manually at: ' + recipientEmail
-        );
-      }
-    } catch (error) {
-      console.error('Feedback Submission Error:', error);
+      await Linking.openURL(mailtoUrl);
+      setEmail('');
+      setFeedback('');
+      setRating(0);
+      // Alert.alert('Success', 'Email client opened. Please send your feedback.');
+    } catch (openError) {
+      console.error('Error opening email client:', openError);
       Alert.alert(
-        'Processing Error',
-        'Something went wrong while processing your feedback. Please try again or contact us directly.'
+        'Error',
+        `Could not open email client. Please contact us manually at: ${recipientEmail}`
       );
     } finally {
       setIsSubmitting(false);
@@ -192,6 +148,7 @@ const FeedbackForm = () => {
                   value={email}
                   onChangeText={setEmail}
                   placeholder="you@example.com"
+                  placeholderTextColor="#94a3b8"
                   keyboardType="email-address"
                   autoCapitalize="none"
                   maxLength={100}
@@ -211,6 +168,7 @@ const FeedbackForm = () => {
                 value={feedback}
                 onChangeText={setFeedback}
                 placeholder="Tell us what you think..."
+                placeholderTextColor="#94a3b8"
                 multiline
                 numberOfLines={5}
                 textAlignVertical="top"

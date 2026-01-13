@@ -1,12 +1,13 @@
 {
   "expo": {
-    "name": "Myapplication",
-    "slug": "Myapplication",
+    "name": "CGPA Tracker",
+    "slug": "cgpatracker",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/logo.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
+    "jsEngine": "hermes",
     "splash": {
       "image": "./assets/logo.png",
       "resizeMode": "contain",
@@ -21,7 +22,7 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.anonymous.Myapplication"
+      "package": "com.hexonyx.cgpatracker"
     },
     "web": {
       "favicon": "./assets/logo.png"

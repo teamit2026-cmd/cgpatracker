@@ -150,7 +150,7 @@ export const departmentSubjectsCredits = {
             { code: 'CSA133', name: 'Project Work', credits: 8 },
         ]
     },
-    EEE: {
+    ECE: {
         1: [
             { code: 'MAA101', name: 'Mathematics I', credits: 4 },
             { code: 'EEA101', name: 'Basic Electrical Engineering', credits: 4 },
@@ -237,5 +237,5 @@ export const departmentSubjectsCredits = {
 export const departmentOptions = [
     { label: "Information Technology (IT)", value: "IT" },
     { label: "Computer Science Engineering (CSE)", value: "CSE" },
-    { label: "Electrical & Electronics Engineering (EEE)", value: "EEE" }
+    { label: "Electronics & Communication Engineering (ECE)", value: "ECE" }
 ];
