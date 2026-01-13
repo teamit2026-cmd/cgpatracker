@@ -22,6 +22,7 @@ import HexonyxFooter from './components/HexonyxFooter';
 // CORRECT PATHS
 import ResultService from './database/services/ResultService';
 import UserService from './database/services/UserService';
+import { departmentOptions } from './data/DepartmentData';
 
 const screenWidth = Dimensions.get('window').width;
 
@@ -277,9 +278,9 @@ const CGPAProgressChart = () => {
                 onValueChange={(itemValue) => setSelectedDepartment(itemValue)}
                 mode="dropdown"
               >
-                <Picker.Item label="Computer Science Engineering" value="CSE" />
-                <Picker.Item label="Information Technology" value="IT" />
-                <Picker.Item label="Electrical & Electronics Engineering" value="EEE" />
+                {departmentOptions.map((option) => (
+                  <Picker.Item key={option.value} label={option.label} value={option.value} />
+                ))}
               </Picker>
             </View>
 

@@ -41,7 +41,31 @@ class ResultService {
   // 🚀 NEW: Universal GPA calculator that works for both department and custom subjects
   calculateUniversalGPA(subjects, grades = null) {
     try {
-      if (!subjects || !Array.isArray(subjects) || subjects.length === 0) {
+      // Enhanced input validation
+      if (!subjects) {
+        console.warn('calculateUniversalGPA: subjects is null or undefined');
+        return {
+          gpa: 0,
+          totalGradePoints: 0,
+          totalCredits: 0,
+          totalSubjects: 0,
+          grade: 'F'
+        };
+      }
+
+      if (!Array.isArray(subjects)) {
+        console.error('calculateUniversalGPA: subjects is not an array:', typeof subjects);
+        return {
+          gpa: 0,
+          totalGradePoints: 0,
+          totalCredits: 0,
+          totalSubjects: 0,
+          grade: 'F'
+        };
+      }
+
+      if (subjects.length === 0) {
+        console.warn('calculateUniversalGPA: subjects array is empty');
         return {
           gpa: 0,
           totalGradePoints: 0,
@@ -55,7 +79,13 @@ class ResultService {
       let totalCredits = 0;
       let validSubjects = 0;
 
-      subjects.forEach(subject => {
+      subjects.forEach((subject, index) => {
+        // Validate subject structure
+        if (!subject || typeof subject !== 'object') {
+          console.warn(`calculateUniversalGPA: Invalid subject at index ${index}:`, subject);
+          return; // Skip this subject
+        }
+
         let gradePoints = 0;
         let credits = 0;
 
@@ -78,6 +108,12 @@ class ResultService {
           credits = subject.credits;
         }
 
+        // Validate credits is a positive number
+        if (typeof credits !== 'number' || isNaN(credits) || credits <= 0) {
+          console.warn(`calculateUniversalGPA: Invalid credits for subject at index ${index}:`, credits);
+          return; // Skip this subject
+        }
+
         // Check if we have both points (can be 0 for F) and credits
         if (credits > 0) {
           totalGradePoints += gradePoints * credits;
@@ -97,7 +133,7 @@ class ResultService {
         grade: grade
       };
     } catch (error) {
-      console.error('❌ Error in calculateUniversalGPA:', error);
+      console.error('❌ Critical error in calculateUniversalGPA:', error);
       return {
         gpa: 0,
         totalGradePoints: 0,
@@ -194,7 +230,14 @@ class ResultService {
             isCustom,
             grade,
             gradeColor,
-            subjectsJSON: resultData.subjects ? JSON.stringify(resultData.subjects) : (resultData.subjectsJSON || '[]'),
+            subjectsJSON: (() => {
+              try {
+                return resultData.subjects ? JSON.stringify(resultData.subjects) : (resultData.subjectsJSON || '[]');
+              } catch (jsonError) {
+                console.error('❌ Error stringifying subjects:', jsonError);
+                return '[]';
+              }
+            })(),
             timestamp,
             dateFormatted,
             timeFormatted,

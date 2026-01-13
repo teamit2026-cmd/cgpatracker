@@ -233,3 +233,9 @@ export const departmentSubjectsCredits = {
         ]
     }
 };
+
+export const departmentOptions = [
+    { label: "Information Technology (IT)", value: "IT" },
+    { label: "Computer Science Engineering (CSE)", value: "CSE" },
+    { label: "Electrical & Electronics Engineering (EEE)", value: "EEE" }
+];

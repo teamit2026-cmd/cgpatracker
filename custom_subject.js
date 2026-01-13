@@ -18,7 +18,7 @@ import {
 import { FontAwesome5, Ionicons } from '@expo/vector-icons';
 import { Picker } from '@react-native-picker/picker';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { departmentSubjectsCredits } from './data/DepartmentData';
+import { departmentSubjectsCredits, departmentOptions } from './data/DepartmentData';
 import CustomSubjectService from './database/services/CustomSubjectService';
 import ResultService from './database/services/ResultService';
 import UserService from './database/services/UserService';
@@ -76,28 +76,68 @@ export default function CombinedCGPATracker({ navigation }) {
     }
   }, []);
 
-  // Add subject function
+  // Add subject function with enhanced validation
   const addSubject = useCallback(() => {
+    // Validate required fields
     if (!currentSubject.name || !currentSubject.credits) {
       Alert.alert('Error', 'Please fill at least Subject Name and Credits');
       return;
     }
+
+    // Validate subject name length
+    const trimmedName = currentSubject.name.trim();
+    if (trimmedName.length < 2) {
+      Alert.alert('Error', 'Subject name must be at least 2 characters');
+      return;
+    }
+    if (trimmedName.length > 50) {
+      Alert.alert('Error', 'Subject name cannot exceed 50 characters');
+      return;
+    }
+
+    // Validate credits is a valid number and within reasonable range
     const creditsNum = parseInt(currentSubject.credits, 10);
     if (isNaN(creditsNum) || creditsNum <= 0) {
       Alert.alert('Error', 'Credits must be a valid positive integer');
       return;
     }
+    if (creditsNum > 10) {
+      Alert.alert('Error', 'Credits cannot exceed 10. Please enter a valid credit value.');
+      return;
+    }
+
+    // Check for duplicate subject names (case-insensitive)
+    const duplicateName = subjects.find(
+      s => s.name.toLowerCase() === trimmedName.toLowerCase()
+    );
+    if (duplicateName) {
+      Alert.alert('Duplicate Subject', `A subject named "${duplicateName.name}" already exists. Please use a different name.`);
+      return;
+    }
+
+    // Check for duplicate subject code if provided
+    const trimmedCode = currentSubject.code.trim();
+    if (trimmedCode) {
+      const duplicateCode = subjects.find(
+        s => s.code.toLowerCase() === trimmedCode.toLowerCase()
+      );
+      if (duplicateCode) {
+        Alert.alert('Duplicate Code', `Subject code "${trimmedCode}" is already used. Please use a different code.`);
+        return;
+      }
+    }
+
     const timestamp = Date.now().toString();
     const newSubject = {
       id: timestamp,
-      name: currentSubject.name.trim(),
-      code: currentSubject.code.trim() || `CUST-${timestamp.slice(-4)}`,
+      name: trimmedName,
+      code: trimmedCode || `CUST-${timestamp.slice(-4)}`,
       credits: creditsNum,
     };
     setSubjects(prev => [...prev, newSubject]);
     setCurrentSubject({ name: '', code: '', credits: '' });
     Keyboard.dismiss();
-  }, [currentSubject]);
+  }, [currentSubject, subjects]);
 
   // Import subjects from department/semester
   const importSubjectsFromDepartment = useCallback(() => {
@@ -277,9 +317,9 @@ export default function CombinedCGPATracker({ navigation }) {
                     style={styles.picker}
                     mode="dropdown"
                   >
-                    <Picker.Item label="CSE" value="CSE" />
-                    <Picker.Item label="IT" value="IT" />
-                    <Picker.Item label="EEE" value="EEE" />
+                    {departmentOptions.map((option) => (
+                      <Picker.Item key={option.value} label={option.value} value={option.value} />
+                    ))}
                   </Picker>
                 </View>
 
@@ -322,6 +362,7 @@ export default function CombinedCGPATracker({ navigation }) {
                 onChangeText={(text) => setCurrentSubject(prev => ({ ...prev, name: text }))}
                 placeholderTextColor="#999"
                 returnKeyType="next"
+                maxLength={50}
               />
               <TextInput
                 style={styles.input}
@@ -330,6 +371,7 @@ export default function CombinedCGPATracker({ navigation }) {
                 onChangeText={(text) => setCurrentSubject(prev => ({ ...prev, code: text }))}
                 placeholderTextColor="#999"
                 returnKeyType="next"
+                maxLength={20}
               />
               <TextInput
                 style={styles.input}

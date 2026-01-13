@@ -4,20 +4,20 @@ export const ResultSchema = {
   primaryKey: 'id',
   properties: {
     id: 'string',
-    userId: 'string',
-    value: 'double', // ADDED (CGPA value)
-    semester: 'string', // CHANGED from int to string
-    department: 'string?', // ADDED
-    totalSubjects: 'int', // ADDED
-    isCustom: { type: 'bool', default: false }, // ADDED
-    grade: 'string?', // ADDED
-    gradeColor: 'string?', // ADDED
-      subjectsJSON: 'string?', // Optional JSON string storing subject list with grades
-    timestamp: 'date', // ADDED
-    dateFormatted: 'string', // ADDED
-    timeFormatted: 'string', // ADDED
+    userId: { type: 'string', indexed: true }, // Indexed for filtering by user
+    value: 'double', // CGPA value
+    semester: { type: 'string', indexed: true }, // Indexed for semester filtering
+    department: { type: 'string', optional: true, indexed: true }, // Fixed: use optional: true
+    totalSubjects: 'int',
+    isCustom: { type: 'bool', default: false, indexed: true }, // Indexed for custom/standard filtering
+    grade: { type: 'string', optional: true },
+    gradeColor: { type: 'string', optional: true },
+    subjectsJSON: { type: 'string', optional: true }, // JSON string storing subject list with grades
+    timestamp: { type: 'date', indexed: true }, // Indexed for sorting by date
+    dateFormatted: 'string',
+    timeFormatted: 'string',
     createdAt: 'date',
     syncedWithMongo: { type: 'bool', default: false },
-    mongoId: 'string?',
+    mongoId: { type: 'string', optional: true },
   },
 };

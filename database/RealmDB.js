@@ -36,7 +36,7 @@ class RealmDB {
           ResultSchema,
           CustomSubjectSchema
         ],
-        schemaVersion: 4,
+        schemaVersion: 5,
         migration: (oldRealm, newRealm) => {
           console.log('🔄 Running Realm migration...');
 
@@ -175,9 +175,13 @@ class RealmDB {
     return await this.initialize();
   }
 
-  // Generate unique ID
+  // Improved ID generation to prevent collisions
   generateId() {
-    return Date.now().toString() + Math.random().toString(36).substr(2, 9);
+    // Create a more robust UUID-like ID
+    const timestamp = Date.now().toString(36);
+    const randomPart1 = Math.random().toString(36).substr(2, 9);
+    const randomPart2 = Math.random().toString(36).substr(2, 9);
+    return `${timestamp}-${randomPart1}-${randomPart2}`;
   }
 
   // Close Realm instance

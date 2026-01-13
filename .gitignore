@@ -49,3 +49,8 @@ Desktop.ini
 # Expo Prebuild
 android/
 ios/
+
+# Realm
+*.realm
+*.realm.lock
+*.realm.management

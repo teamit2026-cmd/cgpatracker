@@ -31,7 +31,7 @@ const DEVELOPER_MESSAGES = [
     message: 'Dedicated to providing the best tracking experience for PKIETians.',
     color: '#232867',
     gradient: ['#ffffff', '#e3f2fd'],
-    avatar: '👨‍💻',
+    avatar: '🤖',
     rating: 5,
   },
   {
@@ -40,7 +40,7 @@ const DEVELOPER_MESSAGES = [
     message: 'Focusing on clean code and accurate calculations for every department.',
     color: '#232867',
     gradient: ['#ffffff', '#e3f2fd'],
-    avatar: '🚀',
+    avatar: '👨🏻‍💻',
     rating: 5,
   },
   {
@@ -49,7 +49,7 @@ const DEVELOPER_MESSAGES = [
     message: 'We aim to make academic progress tracking seamless and efficient.',
     color: '#232867',
     gradient: ['#ffffff', '#e3f2fd'],
-    avatar: '🎨',
+    avatar: '</>',
     rating: 5,
   },
   {
@@ -58,7 +58,7 @@ const DEVELOPER_MESSAGES = [
     message: 'Innovation in education through technology is our core mission.',
     color: '#232867',
     gradient: ['#ffffff', '#e3f2fd'],
-    avatar: '💡',
+    avatar: '🎨',
     rating: 5,
   },
   {
@@ -67,7 +67,7 @@ const DEVELOPER_MESSAGES = [
     message: 'Helping students stay ahead with real-time GCPA insights.',
     color: '#232867',
     gradient: ['#ffffff', '#e3f2fd'],
-    avatar: '📊',
+    avatar: '💡',
     rating: 5,
   },
 ];
@@ -196,9 +196,7 @@ const Dashboard = ({ navigation }) => {
           </Text>
         </View>
         <Image
-          source={{
-            uri: 'https://cdn-icons-png.flaticon.com/512/2919/2919600.png',
-          }}
+          source={require('./assets/avatar.png')}
           style={styles.iconImage}
           resizeMode="contain"
         />
@@ -594,8 +592,8 @@ const styles = StyleSheet.create({
   },
 
   iconImage: {
-    width: 85,
-    height: 85,
+    width: 95,
+    height: 95,
     marginLeft: 10,
   },
 
@@ -723,11 +721,6 @@ const styles = StyleSheet.create({
     marginRight: 16,
     borderRadius: 28,
     overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.2,
-    shadowRadius: 16,
-    elevation: 8,
   },
   gradientBackground: {
     padding: 12,

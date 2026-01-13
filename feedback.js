@@ -17,6 +17,11 @@ import {
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 
+// Enhanced email validation regex
+const EMAIL_REGEX = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+const MAX_EMAIL_LENGTH = 100;
+const MAX_FEEDBACK_LENGTH = 1000;
+
 const FeedbackForm = () => {
   const [email, setEmail] = useState('');
   const [feedback, setFeedback] = useState('');
@@ -26,22 +31,58 @@ const FeedbackForm = () => {
   const handleSubmit = async () => {
     Keyboard.dismiss();
 
-    if (!email.trim() || !feedback.trim() || rating === 0) {
+    // Enhanced validation
+    const trimmedEmail = email.trim();
+    const trimmedFeedback = feedback.trim();
+
+    if (!trimmedEmail || !trimmedFeedback || rating === 0) {
       Alert.alert(
         'Incomplete Form',
-        'Please provide your email id, a rating, and your feedback.'
+        'Please provide your email address, a rating, and your feedback.'
+      );
+      return;
+    }
+
+    // Validate email format
+    if (!EMAIL_REGEX.test(trimmedEmail)) {
+      Alert.alert(
+        'Invalid Email',
+        'Please enter a valid email address (e.g., user@example.com)'
+      );
+      return;
+    }
+
+    // Validate email length
+    if (trimmedEmail.length > MAX_EMAIL_LENGTH) {
+      Alert.alert(
+        'Email Too Long',
+        `Email address cannot exceed ${MAX_EMAIL_LENGTH} characters.`
+      );
+      return;
+    }
+
+    // Validate feedback length
+    if (trimmedFeedback.length > MAX_FEEDBACK_LENGTH) {
+      Alert.alert(
+        'Feedback Too Long',
+        `Feedback cannot exceed ${MAX_FEEDBACK_LENGTH} characters.`
       );
       return;
     }
 
     setIsSubmitting(true);
     try {
-      const isOnline = await fetch('https://www.google.com', {
-        method: 'HEAD',
-        mode: 'no-cors',
-      })
-        .then(() => true)
-        .catch(() => false);
+      // Improved network check
+      let isOnline = true;
+      try {
+        await fetch('https://www.google.com', {
+          method: 'HEAD',
+          mode: 'no-cors',
+          cache: 'no-cache',
+        });
+      } catch (networkError) {
+        isOnline = false;
+      }
 
       if (!isOnline) {
         Alert.alert(
@@ -52,19 +93,34 @@ const FeedbackForm = () => {
         return;
       }
 
-      const recipientEmail = 'mr.dhanush0745@gmail.com';
-      const subject = `Feedback: PKIET CGPA Tracker - ${email}`;
-      const mailBody = `Feedback from PKIET CGPA Tracker\n\nUser Email: ${email}\nRating: ${'⭐'.repeat(rating)} (${rating}/5)\n\nMessage:\n${feedback}`;
+      const recipientEmail = 'team.it.2026@gmail.com';
+      const subject = `Feedback: PKIET CGPA Tracker - ${trimmedEmail}`;
+      const mailBody = `Feedback from PKIET CGPA Tracker\n\nUser Email: ${trimmedEmail}\nRating: ${'⭐'.repeat(rating)} (${rating}/5)\n\nMessage:\n${trimmedFeedback}`;
 
       const mailtoUrl = `mailto:${recipientEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(mailBody)}`;
 
-      const canOpenEmail = await Linking.canOpenURL(mailtoUrl);
+      let canOpenEmail = false;
+      try {
+        canOpenEmail = await Linking.canOpenURL(mailtoUrl);
+      } catch (linkError) {
+        console.error('Error checking mailto support:', linkError);
+        canOpenEmail = false;
+      }
 
       if (canOpenEmail) {
-        await Linking.openURL(mailtoUrl);
-        setEmail('');
-        setFeedback('');
-        setRating(0);
+        try {
+          await Linking.openURL(mailtoUrl);
+          setEmail('');
+          setFeedback('');
+          setRating(0);
+          Alert.alert('Success', 'Email client opened. Please send your feedback.');
+        } catch (openError) {
+          console.error('Error opening email client:', openError);
+          Alert.alert(
+            'Error',
+            `Could not open email client. Please contact us manually at: ${recipientEmail}`
+          );
+        }
       } else {
         Alert.alert(
           'Mail App Not Found',
@@ -75,7 +131,7 @@ const FeedbackForm = () => {
       console.error('Feedback Submission Error:', error);
       Alert.alert(
         'Processing Error',
-        'Something went wrong. Please try again.'
+        'Something went wrong while processing your feedback. Please try again or contact us directly.'
       );
     } finally {
       setIsSubmitting(false);
@@ -138,6 +194,7 @@ const FeedbackForm = () => {
                   placeholder="you@example.com"
                   keyboardType="email-address"
                   autoCapitalize="none"
+                  maxLength={100}
                 />
               </View>
             </View>
@@ -157,6 +214,7 @@ const FeedbackForm = () => {
                 multiline
                 numberOfLines={5}
                 textAlignVertical="top"
+                maxLength={1000}
               />
             </View>
 
@@ -174,7 +232,7 @@ const FeedbackForm = () => {
 
             <View style={styles.noteContainer}>
               <Text style={styles.noteText}>
-                <Text style={styles.noteBold}>NOTE:</Text> any queries contact to this mail team@gmail.com
+                <Text style={styles.noteBold}>NOTE:</Text> any queries contact to this mail team.it.2026@gmail.com
               </Text>
             </View>
           </View>

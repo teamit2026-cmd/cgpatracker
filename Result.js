@@ -40,6 +40,7 @@ const Result = () => {
   const [gradeInfo, setGradeInfo] = useState({ grade: '', color: '' });
 
   const pulseAnim = useRef(new Animated.Value(1)).current;
+  const animationRef = useRef(null); // Store animation reference for cleanup
 
   useEffect(() => {
     loadCurrentUser();
@@ -110,10 +111,24 @@ const Result = () => {
       setMotivation(calculationResult.gpa);
       setGradeClassification(calculationResult.gpa);
     }
+
+    // Cleanup animation on component unmount
+    return () => {
+      if (animationRef.current) {
+        animationRef.current.stop();
+        animationRef.current = null;
+      }
+    };
   }, [calculationResult]);
 
   const startPulse = () => {
-    Animated.loop(
+    // Stop any existing animation first
+    if (animationRef.current) {
+      animationRef.current.stop();
+    }
+
+    // Start new animation and store reference
+    animationRef.current = Animated.loop(
       Animated.sequence([
         Animated.timing(pulseAnim, {
           toValue: 1.3,
@@ -126,7 +141,8 @@ const Result = () => {
           useNativeDriver: true,
         }),
       ])
-    ).start();
+    );
+    animationRef.current.start();
   };
 
   const setGradeClassification = (cgpaValue) => {
@@ -161,8 +177,8 @@ const Result = () => {
       setMessage('🎉 Great job! Your hard work is paying off!');
       setEmoji('🎊');
     } else if (cgpaValue >= 7.5) {
-      setMessage('🚀 You\'re doing great! Aim even higher!');
-      setEmoji('🌈');
+      setMessage('🔆 You\'re doing great! Aim even higher!');
+      setEmoji('🚀');
     } else if (cgpaValue >= 7) {
       setMessage('💫 Good progress! You\'re one step away from brilliance!');
       setEmoji('⭐');

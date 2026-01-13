@@ -5,15 +5,15 @@ export const UserSchema = {
   properties: {
     id: 'string',
     name: 'string',
-    email: 'string',
-    regNo: 'string?',
+    email: { type: 'string', indexed: true }, // Indexed for faster email lookups
+    regNo: { type: 'string', optional: true, indexed: true }, // Fixed: use optional: true instead of ?
     department: 'string',
-    year: 'string?',
-    phone: 'string?',
-    isActive: { type: 'bool', default: true }, // ADD THIS PROPERTY
+    year: { type: 'string', optional: true },
+    phone: { type: 'string', optional: true },
+    isActive: { type: 'bool', default: true, indexed: true }, // Indexed for active user queries
     createdAt: 'date',
     updatedAt: 'date',
     syncedWithMongo: { type: 'bool', default: false },
-    mongoId: 'string?',
+    mongoId: { type: 'string', optional: true },
   },
 };

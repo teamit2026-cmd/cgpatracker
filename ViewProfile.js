@@ -23,6 +23,8 @@ import HexonyxFooter from './components/HexonyxFooter';
 
 const { height: screenHeight } = Dimensions.get("window");
 
+import { departmentOptions } from './data/DepartmentData';
+
 export default function ViewProfile() {
   // User profile state will be loaded from Realm
   const [userProfile, setUserProfile] = useState({
@@ -47,13 +49,6 @@ export default function ViewProfile() {
   const [toastMessage, setToastMessage] = useState("");
   const [toastType, setToastType] = useState("success");
   const [toastAnimation] = useState(new Animated.Value(0));
-
-  // Options for dropdowns
-  const departmentOptions = [
-    { label: "Information Technology (IT)", value: "IT" },
-    { label: "Computer Science Engineering (CSE)", value: "CSE" },
-    { label: "Electrical & Electronics Engineering (EEE)", value: "EEE" }
-  ];
 
   const yearOptions = [
     { label: "I", value: "I" },
@@ -101,10 +96,11 @@ export default function ViewProfile() {
     setEditProfile(userProfile);
   }, [userProfile]);
 
-  // Validation functions
+  // Enhanced validation functions
   const validateName = (name) => /^[A-Za-z ]*$/.test(name);
   const validateRegistrationNumber = (regno) => /^\d*$/.test(regno);
-  const validateEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  // Stricter email validation to catch common mistakes
+  const validateEmail = (email) => /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(email);
 
   const validateField = (fieldName, value) => {
     const newErrors = { ...errors };
@@ -113,6 +109,7 @@ export default function ViewProfile() {
         if (!value.trim()) newErrors.name = "Name is required";
         else if (!validateName(value)) newErrors.name = "Name can only contain letters and spaces";
         else if (value.trim().length < 2) newErrors.name = "Name must be at least 2 characters";
+        else if (value.trim().length > 50) newErrors.name = "Name cannot exceed 50 characters";
         else newErrors.name = "";
         break;
       case "regNo":
@@ -131,7 +128,8 @@ export default function ViewProfile() {
         break;
       case "email":
         if (!value.trim()) newErrors.email = "Email is required";
-        else if (!validateEmail(value)) newErrors.email = "Invalid email format";
+        else if (value.trim().length > 100) newErrors.email = "Email cannot exceed 100 characters";
+        else if (!validateEmail(value.trim())) newErrors.email = "Invalid email format (e.g., user@example.com)";
         else newErrors.email = "";
         break;
       default:
@@ -141,9 +139,12 @@ export default function ViewProfile() {
     return !newErrors[fieldName];
   };
 
-  // Input change handlers
+  // Input change handlers with sanitization
   const handleNameChange = (text) => {
-    if (validateName(text)) setEditProfile({ ...editProfile, name: text });
+    // Only allow valid characters and limit length
+    if (validateName(text) && text.length <= 50) {
+      setEditProfile({ ...editProfile, name: text });
+    }
     validateField("name", text);
   };
   const handleRegNoChange = (text) => {
@@ -151,7 +152,11 @@ export default function ViewProfile() {
     validateField("regNo", text);
   };
   const handleEmailChange = (text) => {
-    setEditProfile({ ...editProfile, email: text });
+    // Trim whitespace and limit length
+    const sanitized = text.trim();
+    if (sanitized.length <= 100) {
+      setEditProfile({ ...editProfile, email: sanitized });
+    }
     validateField("email", text);
   };
 
@@ -193,13 +198,14 @@ export default function ViewProfile() {
       if (currentUser) {
         // UPDATE existing user
         console.log("🔄 Updating user profile:", editProfile);
+        // Sanitize all inputs before saving
         await UserService.saveUser({
           id: currentUser.id,
-          name: editProfile.name.trim(),
-          regNo: editProfile.regNo.trim(),
+          name: editProfile.name.trim().substring(0, 50),
+          regNo: editProfile.regNo.trim().substring(0, 12),
           department: editProfile.department,
           year: editProfile.year,
-          email: editProfile.email.trim(),
+          email: editProfile.email.trim().toLowerCase().substring(0, 100),
           isActive: true,
         });
         setUserProfile(editProfile);
@@ -208,12 +214,13 @@ export default function ViewProfile() {
       } else {
         // Create new user
         console.log("🔄 Creating new user profile:", editProfile);
+        // Sanitize all inputs before saving
         const savedUser = await UserService.saveUser({
-          name: editProfile.name.trim(),
-          regNo: editProfile.regNo.trim(),
+          name: editProfile.name.trim().substring(0, 50),
+          regNo: editProfile.regNo.trim().substring(0, 12),
           department: editProfile.department,
           year: editProfile.year,
-          email: editProfile.email.trim(),
+          email: editProfile.email.trim().toLowerCase().substring(0, 100),
           isActive: true,
         });
         setUserProfile(editProfile);
@@ -306,7 +313,7 @@ export default function ViewProfile() {
       <View style={styles.inputGroup}>
         <Text style={styles.label}>Department *</Text>
         <View style={[styles.pickerContainer, errors.department ? styles.errorInput : null]}>
-          <Ionicons name="business-outline" size={16} color="#87ceeb" style={styles.pickerIcon} />
+          <Ionicons name="business-outline" size={16} color="#87ceeb" style={styles.pickerIcon} pointerEvents="none" />
           <Picker
             selectedValue={editProfile.department}
             onValueChange={(val) => {
@@ -333,7 +340,7 @@ export default function ViewProfile() {
       <View style={styles.inputGroup}>
         <Text style={styles.label}>Academic Year *</Text>
         <View style={[styles.pickerContainer, errors.year ? styles.errorInput : null]}>
-          <Ionicons name="school-outline" size={16} color="#87ceeb" style={styles.pickerIcon} />
+          <Ionicons name="school-outline" size={16} color="#87ceeb" style={styles.pickerIcon} pointerEvents="none" />
           <Picker
             selectedValue={editProfile.year}
             onValueChange={(val) => {
@@ -666,12 +673,13 @@ const styles = StyleSheet.create({
     minHeight: 52,
   },
   pickerIcon: {
-    marginRight: 12,
+    marginRight: 8,
   },
   picker: {
     flex: 1,
     height: 52,
     color: "#232867",
+    marginLeft: -4,
   },
   errorContainer: {
     flexDirection: "row",

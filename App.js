@@ -13,7 +13,6 @@ import About from './about';
 import Feedback from './feedback';
 import CGPAProgressAnalysis from './fo';
 import ViewProfile from './ViewProfile';
-import ChangePassword from './ChangePassword';
 import CGPACalculator from './CGPACalculator';
 import Result from './Result';
 import CustomSubject from './custom_subject';
@@ -148,11 +147,6 @@ function App() {
         <Stack.Screen
           name="ViewProfile"
           component={ViewProfile}
-        />
-
-        <Stack.Screen
-          name="ChangePassword"
-          component={ChangePassword}
         />
 
         {/* Utility Screens */}
