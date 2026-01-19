@@ -10,7 +10,7 @@ import GradeService from './database/services/GradeService';
 import ResultService from './database/services/ResultService';
 import UserService from './database/services/UserService';
 import CustomSubjectService from './database/services/CustomSubjectService';
-import { departmentSubjectsCredits, departmentOptions } from './data/DepartmentData';
+import { departmentOptions, getDepartmentData } from './data/DepartmentData';
 
 // Components
 import SubjectCard from './components/SubjectCard';
@@ -63,10 +63,10 @@ function Notification({ visible, message, type, onDismiss, animation }) {
   );
 }
 
-function SemesterSubjects({ department, setDepartment, semester, setSemester, grades, setGrades, navigation, customSubjects }) {
+function SemesterSubjects({ department, setDepartment, semester, setSemester, grades, setGrades, navigation, customSubjects, regulation }) {
   const subjects = semester === 'custom'
     ? customSubjects
-    : departmentSubjectsCredits[department]?.[semester] || [];
+    : getDepartmentData(regulation || 'R2022_23')[department]?.[semester] || [];
 
   return (
     <View style={{ width: '100%' }}>
@@ -145,7 +145,7 @@ function CalculateButton({ onCalculate }) {
 }
 
 export default function CGPACalculator({ navigation }) {
-  const [department, setDepartment] = useState('CSE');
+  const [department, setDepartment] = useState(departmentOptions[0]?.value || 'IT');
   const [semester, setSemester] = useState(1);
   const [grades, setGrades] = useState({});
   const [notification, setNotification] = useState({ visible: false, message: '', type: 'success' });
@@ -288,7 +288,7 @@ export default function CGPACalculator({ navigation }) {
 
       const subjects = semester === 'custom'
         ? customSubjects
-        : departmentSubjectsCredits[department]?.[semester] || [];
+        : getDepartmentData(currentUser.regulation || 'R2022_23')[department]?.[semester] || [];
 
       if (!subjects || subjects.length === 0) return;
 
@@ -324,7 +324,7 @@ export default function CGPACalculator({ navigation }) {
     // Get subjects based on semester type
     const subjects = semester === 'custom'
       ? customSubjects
-      : departmentSubjectsCredits[department]?.[semester] || [];
+      : getDepartmentData(currentUser.regulation || 'R2022_23')[department]?.[semester] || [];
 
     // Validate subjects structure and data integrity
     if (!subjects || !Array.isArray(subjects) || subjects.length === 0) {
@@ -426,6 +426,7 @@ export default function CGPACalculator({ navigation }) {
           setGrades={setGrades}
           navigation={navigation}
           customSubjects={customSubjects}
+          regulation={currentUser?.regulation || 'R2022_23'}
         />
 
         {currentUser && (

@@ -210,6 +210,17 @@ const Download = () => {
 
       setIsExporting(true);
 
+      // Helper to sanitize HTML content
+      const escapeHtml = (unsafe) => {
+        if (unsafe === null || unsafe === undefined) return '';
+        return String(unsafe)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#039;");
+      };
+
       // Generate HTML content for the PDF
       const htmlContent = `
         <!DOCTYPE html>
@@ -238,8 +249,6 @@ const Download = () => {
             .grades-table th { border-bottom: 2px solid #ddd; text-align: left; padding: 8px; color: #555; }
             .grades-table td { border-bottom: 1px solid #eee; padding: 8px; }
             
-
-            
             .footer { text-align: center; margin-top: 50px; font-size: 10px; color: #64748b; border-top: 1px solid #eee; padding-top: 20px; }
             .developed-by { font-size: 8px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px; }
             .team-hexonyx { font-size: 12px; font-weight: 900; color: #232867; }
@@ -254,16 +263,16 @@ const Download = () => {
           
           <div class="user-info">
             <div class="info-row">
-              <span class="label">Name:</span> ${currentUser.name || 'Student'}
+              <span class="label">Name:</span> ${escapeHtml(currentUser.name || 'Student')}
             </div>
             <div class="info-row">
-              <span class="label">Reg. No:</span> ${currentUser.regNo || 'N/A'}
+              <span class="label">Reg. No:</span> ${escapeHtml(currentUser.regNo || 'N/A')}
             </div>
             <div class="info-row">
-              <span class="label">Department:</span> ${currentUser.department || 'N/A'}
+              <span class="label">Department:</span> ${escapeHtml(currentUser.department || 'N/A')}
             </div>
             <div class="info-row">
-              <span class="label">Year:</span> ${currentUser.year || 'N/A'}
+              <span class="label">Year:</span> ${escapeHtml(currentUser.year || 'N/A')}
             </div>
             <div class="info-row">
               <span class="label">Date:</span> ${new Date().toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' })}
@@ -289,7 +298,7 @@ const Download = () => {
           ${currentTabResults.map(result => `
             <div class="semester-section">
               <div class="semester-header">
-                <span class="semester-title">${result.isCustom ? 'Custom Result' : `Semester ${result.semester}`}</span>
+                <span class="semester-title">${result.isCustom ? 'Custom Result' : `Semester ${escapeHtml(result.semester)}`}</span>
                 <span class="semester-cgpa">CGPA: ${result.value}</span>
               </div>
               
@@ -308,10 +317,10 @@ const Download = () => {
         const grade = Array.isArray(subject) ? subject[2] : (subject.grade || 'N/A');
         return `
                     <tr>
-                      <td style="font-family: monospace; font-weight: bold;">${code}</td>
-                      <td>${name}</td>
+                      <td style="font-family: monospace; font-weight: bold;">${escapeHtml(code)}</td>
+                      <td>${escapeHtml(name)}</td>
                       <td>
-                        ${grade}
+                        ${escapeHtml(grade)}
                       </td>
                     </tr>
                   `}).join('')}

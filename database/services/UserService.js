@@ -27,6 +27,7 @@ class UserService {
             email: userData.email,
             regNo: userData.regNo,
             department: userData.department,
+            regulation: userData.regulation || 'R2022_23',
             year: userData.year,
             phone: userData.phone,
             isActive: userData.isActive !== undefined ? userData.isActive : true, // HANDLE isActive
@@ -34,7 +35,7 @@ class UserService {
             updatedAt: now,
             syncedWithMongo: false,
           };
-          
+
           const savedUser = realm.create('User', user, Realm.UpdateMode.Modified);
           resolve(savedUser);
         });
@@ -60,6 +61,7 @@ class UserService {
           email: u.email,
           regNo: u.regNo,
           department: u.department,
+          regulation: u.regulation,
           year: u.year,
           phone: u.phone,
           isActive: u.isActive,

@@ -7,7 +7,7 @@ A professional and feature-rich CGPA tracking application for PKIET students, bu
 ## ✨ Features
 
 - **Smart CGPA Calculation**: Fast and accurate algorithms tailored for university standards.
-- **Department-Specific Logic**: Support for CSE, IT, EEE, and more with centralized department data.
+- **Department-Specific Logic**: Support for CSE, IT, ECE, and more with centralized department data.
 - **Custom Subjects**: Add your own subjects, credits, and grades for flexible tracking.
 - **Academic Progress Charts**: Visualize your performance over semesters with dynamic SVG-based charts.
 - **Privacy-First (Realm DB)**: All your data is stored securely and locally on your device using Realm NoSQL database. No cloud uploads required.

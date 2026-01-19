@@ -11,15 +11,18 @@ import {
     SafeAreaView
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { departmentSubjectsCredits } from './data/DepartmentData';
+import { departmentOptions, regulationOptions, getDepartmentData } from './data/DepartmentData';
 
 
 
 /* ===================== DEPARTMENT PAGE ===================== */
-const DepartmentPage = React.memo(({ deptKey }) => {
+const DepartmentPage = React.memo(({ deptKey, regulation }) => {
     const semesters = useMemo(
-        () => Object.entries(departmentSubjectsCredits[deptKey]),
-        [deptKey]
+        () => {
+            const data = getDepartmentData(regulation);
+            return Object.entries(data[deptKey] || {});
+        },
+        [deptKey, regulation]
     );
 
     // Removed helper as we now map directly in renderSemester to avoid nested list overhead
@@ -70,14 +73,11 @@ const DepartmentPage = React.memo(({ deptKey }) => {
 export default function SyllabusScreen() {
     const layout = useWindowDimensions();
     const [activeTab, setActiveTab] = useState(0);
+    const [selectedRegulation, setSelectedRegulation] = useState("R2022_23");
     const flatListRef = useRef(null);
 
     const routes = useMemo(
-        () => [
-            { key: 'IT', title: 'IT' },
-            { key: 'CSE', title: 'CSE' },
-            { key: 'EEE', title: 'EEE' },
-        ],
+        () => departmentOptions.map(opt => ({ key: opt.value, title: opt.value })),
         []
     );
 
@@ -101,7 +101,7 @@ export default function SyllabusScreen() {
         return (
             <View style={{ width: layout.width, flex: 1 }}>
                 {isSelected ? (
-                    <DepartmentPage deptKey={item.key} />
+                    <DepartmentPage deptKey={item.key} regulation={selectedRegulation} />
                 ) : (
                     <View style={styles.placeholderContainer}>
                         <Text style={styles.placeholderText}>Loading {item.title}...</Text>
@@ -118,6 +118,27 @@ export default function SyllabusScreen() {
                     <MaterialIcons name="calendar-today" size={20} color="#00d0ffff" />
                     <Text style={styles.appBarTitle}>Syllabus Calendar</Text>
                 </View>
+            </View>
+
+            {/* Regulation Selector */}
+            <View style={styles.regulationContainer}>
+                {regulationOptions.map((opt) => (
+                    <TouchableOpacity
+                        key={opt.value}
+                        style={[
+                            styles.regulationButton,
+                            selectedRegulation === opt.value && styles.regulationButtonActive
+                        ]}
+                        onPress={() => setSelectedRegulation(opt.value)}
+                    >
+                        <Text style={[
+                            styles.regulationText,
+                            selectedRegulation === opt.value && styles.regulationTextActive
+                        ]}>
+                            {opt.label}
+                        </Text>
+                    </TouchableOpacity>
+                ))}
             </View>
 
             {/* Custom Tab Bar */}
@@ -190,6 +211,31 @@ const styles = StyleSheet.create({
         fontSize: 20,
         fontWeight: '700',
         color: '#232867',
+    },
+
+    regulationContainer: {
+        flexDirection: 'row',
+        justifyContent: 'center',
+        paddingVertical: 10,
+        backgroundColor: '#f3f4f6',
+    },
+    regulationButton: {
+        paddingHorizontal: 16,
+        paddingVertical: 6,
+        borderRadius: 20,
+        backgroundColor: '#e5e7eb',
+        marginHorizontal: 5,
+    },
+    regulationButtonActive: {
+        backgroundColor: '#232867',
+    },
+    regulationText: {
+        fontSize: 12,
+        fontWeight: '600',
+        color: '#374151',
+    },
+    regulationTextActive: {
+        color: '#ffffff',
     },
 
     /* Custom Tab Bar Styles */

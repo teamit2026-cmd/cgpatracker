@@ -49,7 +49,7 @@ const CGPAProgressChart = () => {
   const [overallCGPA, setOverallCGPA] = useState(0);
   const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState(null);
-  const [selectedDepartment, setSelectedDepartment] = useState('CSE'); // Default state
+  const [selectedDepartment, setSelectedDepartment] = useState(departmentOptions[0]?.value || 'IT'); // Default state
   const fadeAnimation = useRef(new Animated.Value(0)).current;
   const timeoutRef = useRef(null);
 
@@ -79,7 +79,7 @@ const CGPAProgressChart = () => {
         if (user.department) {
           setSelectedDepartment(user.department);
         }
-        await loadCGPAData(user.id, user.department || 'CSE');
+        await loadCGPAData(user.id, user.department || departmentOptions[0]?.value || 'IT');
       } else {
         // No user found - show empty data
         showEmptyData();

@@ -1,34 +1,53 @@
 {
   "expo": {
     "name": "CGPA Tracker",
-    "slug": "cgpatracker",
+    "slug": "Myapplication",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/logo.png",
-    "userInterfaceStyle": "light",
-    "newArchEnabled": true,
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": false,
     "jsEngine": "hermes",
     "splash": {
-      "image": "./assets/logo.png",
+      "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#1a1a2e"
     },
     "ios": {
       "supportsTablet": true
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/logo.png",
+        "foregroundImage": "./assets/icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true,
       "package": "com.hexonyx.cgpatracker"
     },
     "web": {
       "favicon": "./assets/logo.png"
     },
     "plugins": [
-      "expo-dev-client"
+      "expo-dev-client",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "enableProguardInReleaseBuilds": false,
+            "enableSeparateBuildPerCPUArchitecture": false,
+            "extraProguardRules": "-keep class com.horcrux.svg.** { *; } -keep class io.realm.react.** { *; } -keep class io.realm.** { *; } -dontwarn io.realm.**",
+            "packagingOptions": {
+              "pickFirst": [
+                "**/libc++_shared.so",
+                "**/libjsc.so",
+                "**/librealm.so"
+              ],
+              "doNotStrip": [
+                "**/librealm.so"
+              ]
+            }
+          }
+        }
+      ]
     ],
     "extra": {
       "eas": {

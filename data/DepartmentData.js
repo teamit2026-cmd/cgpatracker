@@ -1,4 +1,5 @@
-export const departmentSubjectsCredits = {
+// Regulations Data
+const R2022_23_Data = {
     IT: {
         1: [
             { code: 'MAA101', name: 'Mathematics I', credits: 4 },
@@ -150,6 +151,7 @@ export const departmentSubjectsCredits = {
             { code: 'CSA133', name: 'Project Work', credits: 8 },
         ]
     },
+
     ECE: {
         1: [
             { code: 'MAA101', name: 'Mathematics I', credits: 4 },
@@ -233,6 +235,117 @@ export const departmentSubjectsCredits = {
         ]
     }
 };
+
+// R2025_26 Data with updated First Year Syllabus
+const R2025_26_Data = {
+    ECE: {
+        1: [
+            { code: 'MAAC101', name: 'Mathematics I', credits: 4 },
+            { code: 'XXAC1xx', name: 'Professional Core I', credits: 4 },
+            { code: 'PHAC101', name: 'Physics', credits: 3 },
+            { code: 'MEAC101', name: 'Engineering Graphics', credits: 3 },
+            { code: 'HSAA101', name: 'English for Communication', credits: 2 },
+            { code: 'GEAS101', name: 'Basic Engineering Skills Laboratory - I', credits: 3 },
+            { code: 'GEAV101', name: 'NSS, Yoga and Health', credits: 1 },
+            { code: 'PHAC102', name: 'Physics Laboratory', credits: 1 },
+        ],
+        2: [
+            { code: 'MAAC102', name: 'Mathematics II', credits: 4 },
+            { code: 'XXAC1xx', name: 'Professional Core II', credits: 4 },
+            { code: 'CYAC101', name: 'Chemistry', credits: 3 },
+            { code: 'CSAC101', name: 'Programming for Problem Solving', credits: 2 },
+            { code: 'HSAA101', name: 'Professional English', credits: 2 },
+            { code: 'GEAS102', name: 'Basic Engineering Skills Laboratory - II', credits: 3 },
+            { code: 'GEAV102', name: 'Essence of Indian Traditional Knowledge', credits: 1 },
+            { code: 'CYAC102', name: 'Chemistry Laboratory', credits: 1 },
+            { code: 'CSAC102', name: 'Computer Programming Laboratory', credits: 1 },
+        ],
+        // Placeholders for higher semesters from R2022_23
+        3: R2022_23_Data.ECE[3],
+        4: R2022_23_Data.ECE[4],
+        5: R2022_23_Data.ECE[5],
+        6: R2022_23_Data.ECE[6],
+        7: R2022_23_Data.ECE[7],
+        8: R2022_23_Data.ECE[8]
+    },
+    IT: {
+        1: [
+            { code: 'MAAC101', name: 'Mathematics I', credits: 4 },
+            { code: 'XXAC1xx', name: 'Professional Core I', credits: 4 },
+            { code: 'CYAC101', name: 'Chemistry', credits: 3 },
+            { code: 'CSAC101', name: 'Programming for Problem Solving', credits: 2 },
+            { code: 'HSAA101', name: 'English for Communication', credits: 2 },
+            { code: 'GEAS102', name: 'Basic Engineering Skills Laboratory - II', credits: 3 },
+            { code: 'GEAV102', name: 'Essence of Indian Traditional Knowledge', credits: 1 },
+            { code: 'CYAC102', name: 'Chemistry Laboratory', credits: 1 },
+            { code: 'CSAC102', name: 'Computer Programming Laboratory', credits: 1 },
+        ],
+        2: [
+            { code: 'MAAC102', name: 'Mathematics II', credits: 4 },
+            { code: 'XXAC1xx', name: 'Professional Core II', credits: 4 },
+            { code: 'PHAC101', name: 'Physics', credits: 3 },
+            { code: 'MEAC101', name: 'Engineering Graphics', credits: 3 },
+            { code: 'HSAA102', name: 'Professional English', credits: 2 },
+            { code: 'GEAS101', name: 'Basic Engineering Skills Laboratory - I', credits: 3 },
+            { code: 'GEAV101', name: 'NSS, Yoga and Health', credits: 1 },
+            { code: 'PHAC102', name: 'Physics Laboratory', credits: 1 },
+        ],
+        // Placeholders for higher semesters from R2022_23
+        3: R2022_23_Data.IT[3],
+        4: R2022_23_Data.IT[4],
+        5: R2022_23_Data.IT[5],
+        6: R2022_23_Data.IT[6],
+        7: R2022_23_Data.IT[7],
+        8: R2022_23_Data.IT[8]
+    },
+    CSE: {
+        1: [
+            { code: 'MAAC101', name: 'Mathematics I', credits: 4 },
+            { code: 'XXAC1xx', name: 'Professional Core II', credits: 4 },
+            { code: 'CYAC101', name: 'Chemistry', credits: 3 },
+            { code: 'CSAC101', name: 'Programming for Problem Solving', credits: 2 },
+            { code: 'HSAA101', name: 'Professional English', credits: 2 },
+            { code: 'GEAS102', name: 'Basic Engineering Skills Laboratory - II', credits: 3 },
+            { code: 'GEAV102', name: 'Essence of Indian Traditional Knowledge', credits: 1 },
+            { code: 'CYAC102', name: 'Chemistry Laboratory', credits: 1 },
+            { code: 'CSAC102', name: 'Computer Programming Laboratory', credits: 1 },
+        ],
+        2: [
+            { code: 'MAAC102', name: 'Mathematics II', credits: 4 },
+            { code: 'XXAC1xx', name: 'Professional Core II', credits: 4 },
+            { code: 'PHAC101', name: 'Physics', credits: 3 },
+            { code: 'MEAC101', name: 'Engineering Graphics', credits: 3 },
+            { code: 'HSAA102', name: 'Professional English', credits: 2 },
+            { code: 'GEAS101', name: 'Basic Engineering Skills Laboratory - I', credits: 3 },
+            { code: 'GEAV101', name: 'NSS, Yoga and Health', credits: 1 },
+            { code: 'PHAC102', name: 'Physics Laboratory', credits: 1 },
+        ],
+        // Placeholders for higher semesters from R2022_23
+        3: R2022_23_Data.CSE[3],
+        4: R2022_23_Data.CSE[4],
+        5: R2022_23_Data.CSE[5],
+        6: R2022_23_Data.CSE[6],
+        7: R2022_23_Data.CSE[7],
+        8: R2022_23_Data.CSE[8]
+    }
+};
+
+export const regulations = {
+    'R2022_23': R2022_23_Data,
+    'R2025_26': R2025_26_Data
+};
+
+export const regulationOptions = [
+    { label: "Regulation 2022 (Old)", value: "R2022_23" },
+    { label: "Regulation 2025 (New)", value: "R2025_26" }
+];
+
+export const getDepartmentData = (regulation) => {
+    return regulations[regulation] || R2022_23_Data;
+};
+
+// Legacy Export for backward compatibility
+export const departmentSubjectsCredits = R2022_23_Data;
 
 export const departmentOptions = [
     { label: "Information Technology (IT)", value: "IT" },

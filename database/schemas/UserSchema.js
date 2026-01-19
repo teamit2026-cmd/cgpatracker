@@ -8,6 +8,7 @@ export const UserSchema = {
     email: { type: 'string', indexed: true }, // Indexed for faster email lookups
     regNo: { type: 'string', optional: true, indexed: true }, // Fixed: use optional: true instead of ?
     department: 'string',
+    regulation: { type: 'string', optional: true, default: 'R2022_23' },
     year: { type: 'string', optional: true },
     phone: { type: 'string', optional: true },
     isActive: { type: 'bool', default: true, indexed: true }, // Indexed for active user queries

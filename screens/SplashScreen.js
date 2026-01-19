@@ -9,16 +9,19 @@ import {
   Platform,
   useWindowDimensions,
   Easing,
+  TouchableOpacity,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { MaterialIcons } from '@expo/vector-icons';
 
-const SplashScreen = ({ onAnimationComplete, isDatabaseReady }) => {
+const SplashScreen = ({ onAnimationComplete, isDatabaseReady, databaseError }) => {
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
   const navigation = useNavigation();
 
   // States for logic
   const [minTimeElapsed, setMinTimeElapsed] = useState(false);
   const [animationFinished, setAnimationFinished] = useState(false);
+  const [showError, setShowError] = useState(false);
 
   // Animation values
   const containerOpacity = useRef(new Animated.Value(0)).current;
@@ -47,15 +50,37 @@ const SplashScreen = ({ onAnimationComplete, isDatabaseReady }) => {
       setMinTimeElapsed(true);
     }, 2500);
 
-    return () => clearTimeout(minTimer);
+    // Maximum wait time - show error if database failed after 15 seconds
+    const maxTimer = setTimeout(() => {
+      if (databaseError) {
+        console.error('⚠️ Database error detected, showing error screen');
+        setShowError(true);
+      } else if (!isDatabaseReady) {
+        console.warn('⚠️ Maximum splash wait time exceeded, forcing navigation');
+        if (!animationFinished) {
+          finishLoadingAndExit();
+        }
+      }
+    }, 15000);
+
+    return () => {
+      clearTimeout(minTimer);
+      clearTimeout(maxTimer);
+    };
   }, []);
 
   // Watch for readiness to exit
   useEffect(() => {
+    // Don't navigate if there's a database error
+    if (databaseError) {
+      setShowError(true);
+      return;
+    }
+
     if (minTimeElapsed && isDatabaseReady && !animationFinished) {
       finishLoadingAndExit();
     }
-  }, [minTimeElapsed, isDatabaseReady, animationFinished]);
+  }, [minTimeElapsed, isDatabaseReady, databaseError, animationFinished]);
 
   const startEntranceAnimation = () => {
     // Container, Logo, Text
@@ -152,6 +177,38 @@ const SplashScreen = ({ onAnimationComplete, isDatabaseReady }) => {
       });
     });
   };
+
+  // Show error screen if database initialization failed
+  if (showError && databaseError) {
+    return (
+      <View style={styles.container}>
+        <StatusBar barStyle="light-content" backgroundColor="#1a1a2e" />
+        <View style={[StyleSheet.absoluteFillObject, { backgroundColor: '#1a1a2e' }]} />
+
+        <View style={styles.content}>
+          <MaterialIcons name="error-outline" size={60} color="#ff6b6b" />
+          <Text style={styles.errorTitle}>Database Error</Text>
+          <Text style={styles.errorMessage}>
+            {databaseError}
+          </Text>
+          <Text style={styles.errorHint}>
+            Please try restarting the app. If the problem persists, try reinstalling the application.
+          </Text>
+          <TouchableOpacity
+            style={styles.retryButton}
+            onPress={() => {
+              console.log('User requested app restart');
+              setShowError(false);
+              // User should manually restart the app
+              // On production, you might want to use expo-updates or similar
+            }}
+          >
+            <Text style={styles.retryButtonText}>Close</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -366,6 +423,47 @@ const styles = StyleSheet.create({
     width: '100%',
     backgroundColor: '#64b5f6', // Light Blue
     borderRadius: 2,
+  },
+  errorTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#ff6b6b',
+    marginTop: 20,
+    marginBottom: 10,
+    textAlign: 'center',
+  },
+  errorMessage: {
+    fontSize: 16,
+    color: '#b3e5fc',
+    textAlign: 'center',
+    paddingHorizontal: 40,
+    marginBottom: 15,
+    lineHeight: 24,
+  },
+  errorHint: {
+    fontSize: 13,
+    color: '#87ceeb',
+    textAlign: 'center',
+    paddingHorizontal: 40,
+    marginBottom: 30,
+    fontStyle: 'italic',
+  },
+  retryButton: {
+    backgroundColor: '#64b5f6',
+    paddingHorizontal: 50,
+    paddingVertical: 15,
+    borderRadius: 25,
+    shadowColor: '#64b5f6',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  retryButtonText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '700',
+    letterSpacing: 1,
   },
 });
 

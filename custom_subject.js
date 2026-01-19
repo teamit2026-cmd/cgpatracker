@@ -18,7 +18,7 @@ import {
 import { FontAwesome5, Ionicons } from '@expo/vector-icons';
 import { Picker } from '@react-native-picker/picker';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { departmentSubjectsCredits, departmentOptions } from './data/DepartmentData';
+import { departmentOptions, getDepartmentData } from './data/DepartmentData';
 import CustomSubjectService from './database/services/CustomSubjectService';
 import ResultService from './database/services/ResultService';
 import UserService from './database/services/UserService';
@@ -45,7 +45,7 @@ export default function CombinedCGPATracker({ navigation }) {
   const [currentDepartment, setCurrentDepartment] = useState('Custom');
 
   // Multi-select for pre-filling subjects
-  const [selectedDept, setSelectedDept] = useState('CSE');
+  const [selectedDept, setSelectedDept] = useState(departmentOptions[0]?.value || 'IT');
   const [selectedSem, setSelectedSem] = useState(1);
 
   // Use same grade scale & UI as CGPA Calculator (S, A, B, C, D, E, F)
@@ -141,7 +141,8 @@ export default function CombinedCGPATracker({ navigation }) {
 
   // Import subjects from department/semester
   const importSubjectsFromDepartment = useCallback(() => {
-    const deptSubs = departmentSubjectsCredits[selectedDept]?.[selectedSem];
+    const regulation = currentUser?.regulation || 'R2022_23';
+    const deptSubs = getDepartmentData(regulation)[selectedDept]?.[selectedSem];
     if (!deptSubs || deptSubs.length === 0) {
       Alert.alert('Info', 'No subjects found for the selected department and semester.');
       return;

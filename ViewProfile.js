@@ -12,6 +12,7 @@ import {
   ScrollView,
   ActivityIndicator,
   BackHandler,
+  Alert,
 } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { Ionicons } from "@expo/vector-icons";
@@ -24,7 +25,7 @@ import HexonyxFooter from './components/HexonyxFooter';
 
 const { height: screenHeight } = Dimensions.get("window");
 
-import { departmentOptions } from './data/DepartmentData';
+import { departmentOptions, regulationOptions } from './data/DepartmentData';
 
 export default function ViewProfile() {
   // User profile state will be loaded from Realm
@@ -32,6 +33,7 @@ export default function ViewProfile() {
     name: "",
     regNo: "",
     department: "",
+    regulation: "R2022_23",
     year: "",
     email: "",
   });
@@ -76,6 +78,7 @@ export default function ViewProfile() {
           name: user.name || "",
           regNo: user.regNo || "",
           department: user.department || "",
+          regulation: user.regulation || "R2022_23",
           year: user.year || "",
           email: user.email || "",
         });
@@ -175,9 +178,17 @@ export default function ViewProfile() {
     }, 3000);
   };
 
+  const showRegulationInfo = () => {
+    Alert.alert(
+      "About Regulations",
+      "Regulation refers to the academic syllabus year (e.g., R2022-23, R2025-26). Your subject list and credit distribution depend on this selection.\n\n• R2022-23: Standard syllabus for batches before 2025.\n• R2025-26: New syllabus for 2025 batch onwards.",
+      [{ text: "Got it", style: "default" }]
+    );
+  };
+
   const handleUpdateProfile = () => {
     setEditProfile(userProfile);
-    setErrors({ name: "", regNo: "", department: "", year: "", email: "" });
+    setErrors({ name: "", regNo: "", department: "", regulation: "", year: "", email: "" });
     setEditModalVisible(true);
   };
 
@@ -207,6 +218,7 @@ export default function ViewProfile() {
           name: editProfile.name.trim().substring(0, 50),
           regNo: editProfile.regNo.trim().substring(0, 12),
           department: editProfile.department,
+          regulation: editProfile.regulation,
           year: editProfile.year,
           email: editProfile.email.trim().toLowerCase().substring(0, 100),
           isActive: true,
@@ -222,6 +234,7 @@ export default function ViewProfile() {
           name: editProfile.name.trim().substring(0, 50),
           regNo: editProfile.regNo.trim().substring(0, 12),
           department: editProfile.department,
+          regulation: editProfile.regulation,
           year: editProfile.year,
           email: editProfile.email.trim().toLowerCase().substring(0, 100),
           isActive: true,
@@ -239,7 +252,7 @@ export default function ViewProfile() {
 
   const handleCancelEdit = () => {
     setEditProfile(userProfile);
-    setErrors({ name: "", regNo: "", department: "", year: "", email: "" });
+    setErrors({ name: "", regNo: "", department: "", regulation: "", year: "", email: "" });
     setEditModalVisible(false);
   };
 
@@ -311,6 +324,32 @@ export default function ViewProfile() {
             <Text style={styles.errorText}>{errors.email}</Text>
           </View>
         ) : null}
+      </View>
+
+      <View style={styles.inputGroup}>
+        <View style={styles.labelRow}>
+          <Text style={styles.label}>Regulation *</Text>
+          <TouchableOpacity onPress={showRegulationInfo} style={styles.infoButton}>
+            <Ionicons name="information-circle-outline" size={18} color="#5dade2" />
+          </TouchableOpacity>
+        </View>
+        <View style={[styles.pickerContainer, errors.regulation ? styles.errorInput : null]}>
+          <Ionicons name="book-outline" size={16} color="#87ceeb" style={styles.pickerIcon} pointerEvents="none" />
+          <Picker
+            selectedValue={editProfile.regulation}
+            onValueChange={(val) => {
+              setEditProfile({ ...editProfile, regulation: val });
+              // Optional: validateField("regulation", val);
+            }}
+            style={styles.picker}
+            mode="dropdown"
+            dropdownIconColor="#232867"
+          >
+            {regulationOptions.map((option) => (
+              <Picker.Item key={option.value} label={option.label} value={option.value} />
+            ))}
+          </Picker>
+        </View>
       </View>
 
       <View style={styles.inputGroup}>
@@ -413,6 +452,10 @@ export default function ViewProfile() {
                 <View style={styles.detailRow}>
                   <Text style={styles.profileLabel}>Department:</Text>
                   <Text style={styles.value}>{userProfile.department || "Not set"}</Text>
+                </View>
+                <View style={styles.detailRow}>
+                  <Text style={styles.profileLabel}>Regulation:</Text>
+                  <Text style={styles.value}>{userProfile.regulation || "R2022_23"}</Text>
                 </View>
                 <View style={[styles.detailRow, styles.lastRow]}>
                   <Text style={styles.profileLabel}>Year:</Text>
@@ -648,6 +691,14 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#232867",
     marginBottom: 8,
+  },
+  labelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  infoButton: {
+    marginLeft: 8,
   },
   inputContainer: {
     flexDirection: "row",

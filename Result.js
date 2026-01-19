@@ -20,6 +20,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import CustomSubjectService from './database/services/CustomSubjectService';
 import ResultService from './database/services/ResultService';
 import UserService from './database/services/UserService';
+import { departmentOptions } from './data/DepartmentData';
 
 const { width, height } = Dimensions.get('window');
 
@@ -359,10 +360,7 @@ const Result = () => {
             <View style={styles.infoContainer}>
               {currentDepartment && (
                 <Text style={styles.departmentText}>
-                  {currentDepartment === 'CSE' ? 'Computer Science Engineering' :
-                    currentDepartment === 'IT' ? 'Information Technology' :
-                      currentDepartment === 'EEE' ? 'Electrical & Electronics Engineering' :
-                        currentDepartment}
+                  {departmentOptions.find(opt => opt.value === currentDepartment)?.label || currentDepartment}
                 </Text>
               )}
               <Text style={styles.heading}>
